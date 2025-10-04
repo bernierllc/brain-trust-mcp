@@ -4,6 +4,8 @@ Contextual Q&A MCP Server with OpenAI integration and plan review capabilities.
 """
 
 import json
+import logging
+import os
 from datetime import datetime
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional
@@ -12,6 +14,10 @@ import openai
 import structlog
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
+
+# Get environment and log level from environment variables
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if ENVIRONMENT == "development" else "INFO")
 
 # Configure structured logging
 structlog.configure(
@@ -32,12 +38,76 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
+# Set the log level
+logging.basicConfig(level=LOG_LEVEL)
 logger = structlog.get_logger()
 
 # Initialize FastMCP server
 mcp = FastMCP("brain-trust")
 
 # Note: OpenAI client is created per-request with API key from tool parameters
+
+
+# Helper functions for logging
+def mask_api_key(api_key: str) -> str:
+    """Mask API key for logging in production."""
+    if not api_key:
+        return "None"
+    if ENVIRONMENT == "production" or LOG_LEVEL != "DEBUG":
+        return f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "***"
+    return api_key
+
+
+def log_openai_request(
+    model: str, messages: List[Dict[str, str]], max_tokens: int, api_key: str
+) -> None:
+    """Log OpenAI request details."""
+    logger.debug(
+        "OpenAI API Request",
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+        model=model,
+        messages=messages,
+        max_tokens=max_tokens,
+        api_key=mask_api_key(api_key),
+        api_key_length=len(api_key) if api_key else 0,
+        headers={
+            "Authorization": f"Bearer {mask_api_key(api_key)}",
+            "Content-Type": "application/json",
+        },
+    )
+
+
+def log_openai_response(response: Any) -> None:
+    """Log OpenAI response details."""
+    logger.debug(
+        "OpenAI API Response",
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+        response_id=getattr(response, "id", None),
+        model=getattr(response, "model", None),
+        usage=getattr(response, "usage", None),
+        choices_count=len(response.choices) if hasattr(response, "choices") else 0,
+        response_headers={
+            "content-type": "application/json",
+        },
+    )
+
+
+def log_mcp_call(tool_name: str, **kwargs: Any) -> None:
+    """Log incoming MCP tool call."""
+    # Mask sensitive parameters
+    safe_kwargs = kwargs.copy()
+    if "api_key" in safe_kwargs:
+        safe_kwargs["api_key"] = mask_api_key(safe_kwargs["api_key"])
+
+    logger.debug(
+        "MCP Tool Call Received",
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+        tool_name=tool_name,
+        parameters=safe_kwargs,
+    )
 
 
 # Data Models
@@ -81,7 +151,23 @@ async def phone_a_friend(
     max_tokens: Annotated[int, "Maximum tokens for response"] = 1000,
 ) -> str:
     """Phone a friend (OpenAI) to get help with a question."""
+    # Log incoming MCP call
+    log_mcp_call(
+        "phone_a_friend",
+        question=question[:100] if len(question) > 100 else question,
+        api_key=api_key,
+        context=context[:100] if context and len(context) > 100 else context,
+        model=model,
+        max_tokens=max_tokens,
+    )
+
     # Create OpenAI client with provided API key
+    logger.debug(
+        "Creating OpenAI client",
+        api_key_provided=bool(api_key),
+        api_key_length=len(api_key) if api_key else 0,
+        api_key_masked=mask_api_key(api_key),
+    )
     client = openai.OpenAI(api_key=api_key)
 
     # Build prompt with optional context
@@ -94,13 +180,21 @@ async def phone_a_friend(
     else:
         prompt = f"Question: {question}\n\nPlease provide a comprehensive answer."
 
+    messages = [{"role": "user", "content": prompt}]
+
     try:
+        # Log OpenAI request
+        log_openai_request(model, messages, max_tokens, api_key)
+
         response = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
             max_tokens=max_tokens,
             temperature=0.3,
         )
+
+        # Log OpenAI response
+        log_openai_response(response)
 
         answer = response.choices[0].message.content
         if not answer:
@@ -111,7 +205,13 @@ async def phone_a_friend(
         return result
 
     except Exception as e:
-        logger.error("Failed to phone a friend", error=str(e))
+        logger.error(
+            "Failed to phone a friend",
+            error=str(e),
+            error_type=type(e).__name__,
+            api_key_provided=bool(api_key),
+            api_key_length=len(api_key) if api_key else 0,
+        )
         raise
 
 
@@ -155,7 +255,29 @@ async def review_plan(
     Returns:
         Dictionary containing review results and feedback
     """
+    # Log incoming MCP call
+    log_mcp_call(
+        "review_plan",
+        plan_content_length=len(plan_content),
+        plan_content_preview=plan_content[:200]
+        if len(plan_content) > 200
+        else plan_content,
+        api_key=api_key,
+        review_level=review_level,
+        context=context[:100] if context and len(context) > 100 else context,
+        plan_id=plan_id,
+        focus_areas=focus_areas,
+        model=model,
+        max_tokens=max_tokens,
+    )
+
     # Create OpenAI client with provided API key
+    logger.debug(
+        "Creating OpenAI client for plan review",
+        api_key_provided=bool(api_key),
+        api_key_length=len(api_key) if api_key else 0,
+        api_key_masked=mask_api_key(api_key),
+    )
     client = openai.OpenAI(api_key=api_key)
 
     # Generate plan ID if not provided
@@ -405,13 +527,21 @@ async def review_plan(
     }}
     """
 
+    messages = [{"role": "user", "content": prompt}]
+
     try:
+        # Log OpenAI request
+        log_openai_request(model, messages, max_tokens, api_key)
+
         response = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,
             max_tokens=max_tokens,
             temperature=0.3,
         )
+
+        # Log OpenAI response
+        log_openai_response(response)
 
         # Parse JSON response
         review_content = response.choices[0].message.content
@@ -479,7 +609,14 @@ async def review_plan(
         }
 
     except Exception as e:
-        logger.error("Failed to review plan", error=str(e), plan_id=plan_id)
+        logger.error(
+            "Failed to review plan",
+            error=str(e),
+            error_type=type(e).__name__,
+            plan_id=plan_id,
+            api_key_provided=bool(api_key),
+            api_key_length=len(api_key) if api_key else 0,
+        )
         raise
 
 
@@ -495,8 +632,22 @@ async def health_check() -> Dict[str, Any]:
 
 
 # Server startup logging
-logger.info("MCP server initialized successfully")
+logger.info(
+    "MCP server initialized successfully",
+    environment=ENVIRONMENT,
+    log_level=LOG_LEVEL,
+    debug_logging_enabled=(LOG_LEVEL == "DEBUG"),
+    sensitive_data_logging=(ENVIRONMENT == "development" and LOG_LEVEL == "DEBUG"),
+)
 
 if __name__ == "__main__":
     # Run the server
+    logger.info(
+        "Starting MCP server",
+        transport="http",
+        host="0.0.0.0",
+        port=8000,
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+    )
     mcp.run(transport="http", host="0.0.0.0", port=8000)
