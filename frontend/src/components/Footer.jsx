@@ -9,7 +9,7 @@ function Footer() {
           <div className="footer-section">
             <h3 className="footer-title">brain-trust</h3>
             <p className="footer-text">
-              Your trusted brain trust for getting AI help with questions and plan reviews.
+              Give your IDE Agent a brain trust to lean on for questions and plan reviews.
             </p>
             <p className="footer-text" style={{ marginTop: '16px' }}>
               Built with FastMCP and OpenAI
