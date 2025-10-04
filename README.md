@@ -672,7 +672,7 @@ See `plans/compare-options-tool.md` for an example plan.
 
 ### Powerful
 
-- Full OpenAI GPT-4 capabilities
+- Use your favorite GPT Model
 - Context-aware answers
 - 5 progressive review levels
 - Master Review Framework with 10-point analysis
