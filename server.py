@@ -245,7 +245,10 @@ async def review_plan(
         )
 
         # Parse JSON response
-        review_text = response.choices[0].message.content.strip()
+        review_content = response.choices[0].message.content
+        if not review_content:
+            raise ValueError("Empty response from OpenAI")
+        review_text: str = review_content.strip()
 
         # Try to extract JSON from the response
         try:
