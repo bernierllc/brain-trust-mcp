@@ -54,7 +54,7 @@ function Footer() {
             MIT License - Open source and free to use
           </p>
           <p className="footer-copyright">
-            Built with FastMCP, OpenAI, and React
+            Built with Cursor, <a href="https://bolt.new/?rid=bmy46m">Bolt.new</a>, FastMCP, OpenAI, and React
           </p>
         </div>
       </div>
