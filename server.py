@@ -314,9 +314,9 @@ async def review_plan(
     log_mcp_call(
         "review_plan",
         plan_content_length=len(plan_content),
-        plan_content_preview=plan_content[:200]
-        if len(plan_content) > 200
-        else plan_content,
+        plan_content_preview=(
+            plan_content[:200] if len(plan_content) > 200 else plan_content
+        ),
         review_level=review_level,
         context=context[:100] if context and len(context) > 100 else context,
         plan_id=plan_id,
