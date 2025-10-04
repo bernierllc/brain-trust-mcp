@@ -751,7 +751,7 @@ MIT License - see LICENSE file for details
 
 - Built with [FastMCP](https://github.com/jlowin/fastmcp) - Fast, Pythonic MCP framework
 - Inspired by the [Model Context Protocol](https://modelcontextprotocol.io/) specification
-- Uses OpenAI's models for intelligent responses
+- Uses whichever OpenAI models you prefer for intelligent responses
 - Testing powered by [pytest](https://pytest.org/) and [pytest-asyncio](https://github.com/pytest-dev/pytest-asyncio)
 - Logging with [structlog](https://www.structlog.org/)
 - Code quality with [black](https://black.readthedocs.io/), [isort](https://pycqa.github.io/isort/), [flake8](https://flake8.pycqa.org/), and [mypy](https://mypy-lang.org/)
