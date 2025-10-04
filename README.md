@@ -1,8 +1,27 @@
 # brain-trust - AI-Powered Q&A and Plan Review MCP Server
 
+[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/bernierllc/brain-trust-mcp/releases)
+[![Tests](https://img.shields.io/badge/tests-18%20passed-success.svg)](./tests)
+[![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen.svg)](./tests)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://python.org)
+
 🧠 **Your trusted brain trust for getting AI help with questions and plan reviews.**
 
-A simple, powerful FastMCP server with just 3 tools that connect Cursor to OpenAI for intelligent question answering and plan analysis.
+A simple, powerful FastMCP server with just 3 tools that connect Cursor to OpenAI for intelligent question answering and structured plan analysis using the Master Review Framework.
+
+---
+
+## 🎉 What's New in v0.1.2
+
+- ⭐ **DEEP_DIVE Review Level** - Technical FMEA-style analysis for implementation planning
+- 📊 **Master Review Framework** - 10-point structured evaluation across all review levels
+- 🔍 **Comprehensive Logging** - Full request/response tracing with environment-aware API key masking
+- ✅ **Professional Test Suite** - 18 pytest tests with 92% code coverage
+- 🎨 **Pre-commit Hooks** - Automated code quality with black, isort, flake8, mypy
+- 🐳 **Enhanced Docker Config** - Environment variable passthrough for easier configuration
+- 📖 **Complete Documentation** - Logging guide, testing guide, header configuration examples
+
+See [Release Notes v0.1.2](./release_notes/RELEASE_NOTES_v0.1.2.md) for full details.
 
 ---
 
@@ -37,21 +56,43 @@ phone_a_friend(
 
 ### 2. 📋 `review_plan`
 
-Get AI-powered feedback on planning documents with structured analysis.
+Get AI-powered feedback on planning documents using the **Master Review Framework** - a structured 10-point evaluation system.
 
-**Review Levels:**
+**Master Review Framework Dimensions:**
 
-- `quick` - Basic structure and completeness check
-- `standard` - Detailed analysis with suggestions
-- `comprehensive` - Deep analysis with alternatives
-- `expert` - Professional-level review with best practices
+- Structure & Organization
+- Completeness
+- Clarity
+- Assumptions & Dependencies
+- Risks
+- Feasibility
+- Alternatives
+- Validation
+- Stakeholders
+- Long-term Sustainability
+
+**Review Levels (Progressive Depth):**
+
+- `quick` - Basic checklist (1-2 suggestions)
+- `standard` - Standard analysis (2-3 questions)
+- `comprehensive` - Detailed coverage (3-5 questions)
+- `deep_dive` - **NEW!** Technical FMEA-style analysis (4-6 questions)
+- `expert` - Professional enterprise-level review (5-7 strategic questions)
 
 ```python
+# Deep technical review
 review_plan(
     plan_content="# Q4 2025 Roadmap\n...",
-    review_level="comprehensive",
+    review_level="deep_dive",  # NEW technical level
     context="Startup with $500K budget, need to launch in 6 months",
-    focus_areas=["timeline", "resources", "risks"]
+    focus_areas=["scalability", "risks", "timeline"]
+)
+
+# Expert enterprise review
+review_plan(
+    plan_content="# Migration Plan\n...",
+    review_level="expert",
+    context="Fortune 500 company, 1M+ users"
 )
 ```
 
@@ -61,7 +102,9 @@ review_plan(
 - Strengths (list)
 - Weaknesses (list)
 - Suggestions (list)
-- Detailed feedback (text)
+- Detailed feedback (structured analysis)
+- Review level used
+- Timestamp
 
 ### 3. ❤️ `health_check`
 
@@ -259,15 +302,35 @@ docker-compose down
 
 ### Environment Variables
 
-The server requires minimal configuration. Create a `.env` file if needed:
+The server supports environment-based configuration. Create a `.env` file:
 
 ```bash
 # Server Configuration
-LOG_LEVEL=INFO                    # Default: INFO
-PORT=8000                         # Default: 8000
+ENVIRONMENT=development           # development or production
+LOG_LEVEL=DEBUG                  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+PORT=8000                        # Default: 8000
+
+# Optional: For development/testing only
+OPENAI_API_KEY=sk-...           # Only needed for local testing
 ```
 
-**Note:** OpenAI API key is **NOT** required as an environment variable. The API key is passed directly from the MCP client with each tool call.
+**Logging Modes:**
+
+**Development (DEBUG):**
+
+- Full API keys visible in logs (for debugging)
+- All request/response details logged
+- Complete header information
+
+**Production (INFO):**
+
+- API keys masked (first 8 + last 4 chars only)
+- Essential information only
+- Reduced sensitive data logging
+
+See `docs/LOGGING.md` for comprehensive logging documentation.
+
+**Note:** OpenAI API key is **NOT** required as an environment variable for production. The API key is passed directly from the MCP client with each tool call.
 
 ### MCP Client Configuration (Required)
 
@@ -321,6 +384,8 @@ curl http://localhost:8000/health
 
 ## 🧪 Testing
 
+### Quick Test
+
 Test that the server is working:
 
 ```bash
@@ -331,24 +396,74 @@ curl http://localhost:8000/health
 # "Use phone_a_friend to ask: What is FastMCP?"
 ```
 
+### Test Suite
+
+Run the comprehensive pytest test suite:
+
+```bash
+# Run all tests (18 tests, ~95 seconds)
+pytest tests/
+
+# Run with coverage report (92% coverage)
+pytest --cov=server --cov-report=term-missing tests/
+
+# Run only unit tests (fast, no API calls)
+pytest tests/test_logging.py
+
+# Run only integration tests (real OpenAI API calls)
+pytest tests/test_tools.py
+
+# Run specific test
+pytest tests/test_tools.py::TestPhoneAFriend::test_phone_a_friend_basic -v
+```
+
+**Test Coverage:**
+
+- ✅ 18 tests total
+- ✅ 8 unit tests (logging, utilities)
+- ✅ 10 integration tests (real OpenAI API calls)
+- ✅ 92% code coverage
+- ✅ All MCP tools tested
+- ✅ All 5 review levels tested
+
+**Requirements:**
+
+- Tests require `OPENAI_API_KEY` in `.env` file for integration tests
+- Unit tests run without API key
+- Tests automatically skip if API key not available
+
+See `tests/README.md` for complete testing documentation.
+
 ---
 
 ## 📁 Project Structure
 
 ```
 mcp-ask-questions/
-├── server.py              # Main MCP server with 3 tools
-├── Dockerfile             # Container definition
-├── docker-compose.yml     # Multi-container orchestration
-├── nginx.conf             # Reverse proxy config
-├── requirements.txt       # Python dependencies
-├── pyproject.toml         # Project configuration
-├── fastmcp.json          # FastMCP deployment config
-├── .env.example          # Environment variables template
-├── README.md             # This file
-├── FINAL_TOOLS.md        # Detailed tool documentation
-├── SIMPLIFIED_TOOLS.md   # Simplification notes
-└── plans/                # Planning documents
+├── server.py                    # Main MCP server with 3 tools
+├── Dockerfile                   # Container definition
+├── docker-compose.yml           # Multi-container orchestration
+├── nginx.conf                   # Reverse proxy config
+├── requirements.txt             # Python dependencies
+├── pyproject.toml              # Project configuration (black, isort, mypy)
+├── fastmcp.json                # FastMCP deployment config
+├── .env.example                # Environment variables template
+├── README.md                   # This file
+├── docs/                       # Documentation
+│   ├── LOGGING.md             # Comprehensive logging guide
+│   ├── HEADER_IMPLEMENTATION.md  # Header-based config guide
+│   └── MCP_CLIENT_HEADERS.md  # Client configuration guide
+├── tests/                      # Pytest test suite (92% coverage)
+│   ├── conftest.py            # Shared fixtures
+│   ├── test_tools.py          # Tool tests (10 tests)
+│   ├── test_logging.py        # Logging tests (8 tests)
+│   └── README.md              # Testing documentation
+├── release_notes/             # Release notes
+│   ├── RELEASE_NOTES_v0.1.2.md
+│   └── RELEASE_NOTES_v0.1.1.md
+├── examples/                   # Example implementations
+│   └── server_with_headers.py # Header-based config example
+└── plans/                      # Planning documents
     ├── contextual-qa-mcp-server.md
     ├── technical-implementation.md
     ├── quick-start-guide.md
@@ -417,10 +532,14 @@ The API key must be configured in your **MCP client** (not in Docker):
 ### Local Development
 
 ```bash
+# Create/activate virtual environment
+python3 -m venv venv
+source venv/bin/activate  # Auto-activates in VS Code/Cursor workspace
+
 # Install dependencies
 pip install -r requirements.txt
 
-# Run server locally (no API key needed for startup)
+# Run server locally
 python server.py
 
 # Server runs on http://localhost:8000
@@ -428,24 +547,120 @@ python server.py
 
 **Note:** The server starts without requiring an OpenAI API key. The API key is provided by the MCP client when calling tools.
 
+### Code Quality
+
+**Pre-commit Hooks:**
+
+Automated code quality checks run on every commit:
+
+```bash
+# Pre-commit automatically runs:
+→ black      # Code formatting
+→ isort      # Import sorting
+→ flake8     # Linting
+→ mypy       # Type checking
+```
+
+Commits are blocked if any check fails. The hook is automatically set up in `.git/hooks/pre-commit`.
+
+**Manual Quality Checks:**
+
+```bash
+# Format code
+black server.py
+
+# Sort imports
+isort server.py
+
+# Lint
+flake8 server.py
+
+# Type check
+mypy server.py
+
+# Run all checks
+black server.py && isort server.py && flake8 server.py && mypy server.py
+```
+
 ### Making Changes
 
-1. Edit `server.py` for tool changes
-2. Rebuild Docker: `docker-compose up -d --build`
-3. Restart Cursor to pick up changes
+1. Create a feature branch
+2. Make your changes to `server.py`
+3. Run tests: `pytest tests/`
+4. Pre-commit hooks will run automatically on commit
+5. Rebuild Docker: `docker-compose up -d --build`
+6. Restart Cursor to pick up changes
 
 ### Adding New Tools
 
-See `plans/compare-options-tool.md` for an example of how to propose and plan new tools.
+1. Create a plan in `plans/your-tool-name.md`
+2. Implement the tool in `server.py` with `@mcp.tool()` decorator
+3. Add tests in `tests/test_tools.py`
+4. Update documentation
+5. Submit a pull request
+
+See `plans/compare-options-tool.md` for an example plan.
 
 ---
 
 ## 📚 Documentation
 
-- **FINAL_TOOLS.md** - Complete tool documentation with examples
-- **SIMPLIFIED_TOOLS.md** - Notes on simplification from original design
-- **PARAMETER_DESCRIPTIONS_ADDED.md** - Parameter documentation details
+### Core Documentation
+
+- **README.md** (this file) - Overview and quick start
+- **docs/LOGGING.md** - Comprehensive logging system guide
+- **docs/HEADER_IMPLEMENTATION.md** - Header-based configuration guide
+- **docs/MCP_CLIENT_HEADERS.md** - Client configuration options
+- **tests/README.md** - Testing documentation and examples
+
+### Release Notes
+
+- **release_notes/RELEASE_NOTES_v0.1.2.md** - Latest release (current)
+- **release_notes/RELEASE_NOTES_v0.1.1.md** - Previous release
+
+### Examples
+
+- **examples/server_with_headers.py** - HTTP header configuration example
+
+### Planning Documents
+
 - **plans/** - Detailed planning documents and proposals
+  - contextual-qa-mcp-server.md
+  - technical-implementation.md
+  - quick-start-guide.md
+  - compare-options-tool.md
+
+---
+
+## ⭐ Features
+
+### Master Review Framework
+
+- **10-point structured evaluation** for comprehensive plan analysis
+- **5 progressive review levels** from quick to expert
+- **FMEA-style failure analysis** in deep_dive mode
+- **Enterprise-grade reviews** with RACI, TCO, SLOs
+
+### Comprehensive Logging
+
+- **Full request/response tracing** for debugging
+- **Environment-aware masking** (debug vs production)
+- **5+ log events per request** with structured JSON output
+- **API key validation** at every step
+
+### Professional Testing
+
+- **92% code coverage** with 18 pytest tests
+- **10 integration tests** with real OpenAI API calls
+- **Automatic skipping** if API key not available
+- **Type-safe** with full mypy compliance
+
+### Development Tools
+
+- **Pre-commit hooks** enforce code quality automatically
+- **Auto-activate venv** in VS Code/Cursor workspace
+- **Docker support** for easy deployment
+- **HTTP header config** support (optional)
 
 ---
 
@@ -456,37 +671,76 @@ See `plans/compare-options-tool.md` for an example of how to propose and plan ne
 - Only 3 tools to learn
 - Direct, straightforward usage
 - No complex context management
+- Clear, comprehensive documentation
 
 ### Powerful
 
 - Full OpenAI GPT-4 capabilities
 - Context-aware answers
-- Multiple review levels
+- 5 progressive review levels
+- Master Review Framework with 10-point analysis
 
 ### Practical
 
 - Solves real problems (questions, plan reviews)
 - Easy to integrate with Cursor
 - Production-ready with Docker
+- 92% test coverage ensures reliability
 
 ### Extensible
 
 - Easy to add new tools
 - Clean, maintainable codebase
 - Well-documented for contributions
+- Professional testing infrastructure
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! To add a new tool:
+We welcome contributions! Here's how to contribute:
 
-1. Create a plan in `plans/your-tool-name.md`
-2. Implement the tool in `server.py`
-3. Add tests and documentation
-4. Submit a pull request
+### Adding a New Tool
+
+1. **Plan**: Create a plan in `plans/your-tool-name.md`
+2. **Implement**: Add tool to `server.py` with `@mcp.tool()` decorator
+3. **Test**: Add tests in `tests/test_tools.py`
+4. **Document**: Update README and add to `docs/` if needed
+5. **Quality**: Pre-commit hooks will run automatically
+6. **Submit**: Create a pull request
 
 See `plans/compare-options-tool.md` for an example plan.
+
+### Code Standards
+
+- **Python 3.12+** with type hints
+- **Black** formatting (line length 88)
+- **isort** for import sorting
+- **flake8** for linting
+- **mypy** for type checking
+- **pytest** for testing (aim for >80% coverage)
+- **Conventional commits** for commit messages
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run with coverage
+pytest --cov=server tests/
+
+# Pre-commit hooks run automatically
+git commit -m "feat: add new tool"
+```
+
+### Documentation Standards
+
+- Add docstrings to all public functions
+- Update README.md for user-facing changes
+- Add examples for new features
+- Keep docs/ up to date
+- Follow existing documentation style
 
 ---
 
@@ -498,9 +752,35 @@ MIT License - see LICENSE file for details
 
 ## 🙏 Acknowledgments
 
-- Built with [FastMCP](https://github.com/jlowin/fastmcp)
-- Inspired by the Model Context Protocol specification
+- Built with [FastMCP](https://github.com/jlowin/fastmcp) - Fast, Pythonic MCP framework
+- Inspired by the [Model Context Protocol](https://modelcontextprotocol.io/) specification
 - Uses OpenAI's GPT-4 for intelligent responses
+- Testing powered by [pytest](https://pytest.org/) and [pytest-asyncio](https://github.com/pytest-dev/pytest-asyncio)
+- Logging with [structlog](https://www.structlog.org/)
+- Code quality with [black](https://black.readthedocs.io/), [isort](https://pycqa.github.io/isort/), [flake8](https://flake8.pycqa.org/), and [mypy](https://mypy-lang.org/)
+
+Thanks to all contributors who provided feedback on the review framework and logging system!
+
+---
+
+## 📊 Project Stats
+
+- **Version**: 0.1.2
+- **Python**: 3.12+
+- **Tools**: 3 (phone_a_friend, review_plan, health_check)
+- **Review Levels**: 5 (quick, standard, comprehensive, deep_dive, expert)
+- **Test Coverage**: 92% (18 tests)
+- **Lines of Code**: ~650 (server.py)
+- **Dependencies**: FastMCP, OpenAI, Pydantic, Structlog
+
+---
+
+## 🔗 Links
+
+- **Repository**: https://github.com/bernierllc/brain-trust-mcp
+- **Issues**: https://github.com/bernierllc/brain-trust-mcp/issues
+- **FastMCP Docs**: https://gofastmcp.com
+- **MCP Specification**: https://modelcontextprotocol.io/
 
 ---
 
