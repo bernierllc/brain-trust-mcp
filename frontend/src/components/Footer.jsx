@@ -33,14 +33,6 @@ function Footer() {
           </div>
 
           <div className="footer-section">
-            <h3 className="footer-title">Project</h3>
-            <p className="footer-text">Version: 0.1.2</p>
-            <p className="footer-text">Python 3.12+</p>
-            <p className="footer-text">Test Coverage: 92%</p>
-            <p className="footer-text">License: MIT</p>
-          </div>
-
-          <div className="footer-section">
             <h3 className="footer-title">Features</h3>
             <p className="footer-text">3 Simple Tools</p>
             <p className="footer-text">5 Review Levels</p>
