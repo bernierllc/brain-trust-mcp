@@ -1,4 +1,4 @@
-# Ask MCP - Hosted OpenAI MCP Server
+# Ask MCP - Hosted OpenAI MCP Server (v0.3.0)
 
 🧠 **Connect your IDE to OpenAI for intelligent question answering and structured plan reviews.**
 

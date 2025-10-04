@@ -80,3 +80,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.2.0]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.2.0
 [0.1.1]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.1.1
 [0.1.0]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.1.0
+
+## v0.3.0
+- Frontend MCP setup updates, E2E tests, one-click installs
