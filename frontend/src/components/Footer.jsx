@@ -51,7 +51,7 @@ function Footer() {
 
         <div className="footer-bottom">
           <p className="footer-copyright">
-            MIT License - Open source and free to use
+            MIT License - <a href="https://github.com/bernierllc/brain-trust-mcp">The code is Open source</a> and free to use
           </p>
           <p className="footer-copyright">
             Built by <a href="https://mbernier.com">Matt Bernier</a> in Colorado <br />
