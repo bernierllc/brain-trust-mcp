@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-10-04
+
+### Added
+
+- Prometheus `/metrics` endpoint and in-memory tallies
+- Homepage metrics widget displaying per-tool success/error totals
+- Optional Postgres-backed daily request counters (gated by `TRACK_METRICS_DB`), with auto table creation
+- Sensitive log redaction and demo routes gated by `ENABLE_DEMOS`
+- Tests for `/metrics` and `/api/metrics/summary`; Playwright E2E for widget
+
+### Security
+
+- Reduce sensitive logging; never log Authorization headers or prompts
+
 ## [0.2.0] - 2025-10-04
 
 ### Changed

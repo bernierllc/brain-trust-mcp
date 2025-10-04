@@ -1,4 +1,4 @@
-# Ask MCP - Hosted OpenAI MCP Server (v0.3.0)
+# Ask MCP - Hosted OpenAI MCP Server (v0.4.0)
 
 🧠 **Connect your IDE to OpenAI for intelligent question answering and structured plan reviews.**
 
@@ -146,6 +146,18 @@ pip install -r requirements.txt
 
 # Run the server
 python server.py
+```
+
+### Metrics (Optional)
+
+- Prometheus: scrape `GET /metrics`
+- Homepage widget: reads `GET /api/metrics/summary`
+- To persist counts to Postgres:
+
+```bash
+TRACK_METRICS_DB=true
+DATABASE_URL=postgresql://user:pass@host:5432/db
+# or SUPABASE_DB_URL=...
 ```
 
 ---
