@@ -762,13 +762,8 @@ Thanks to all contributors who provided feedback on the review framework and log
 
 ## 📊 Project Stats
 
-- **Version**: 0.1.2
-- **Python**: 3.12+
 - **Tools**: 3 (phone_a_friend, review_plan, health_check)
 - **Review Levels**: 5 (quick, standard, comprehensive, deep_dive, expert)
-- **Test Coverage**: 92% (18 tests)
-- **Lines of Code**: ~650 (server.py)
-- **Dependencies**: FastMCP, OpenAI, Pydantic, Structlog
 
 ---
 
