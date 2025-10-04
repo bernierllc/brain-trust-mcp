@@ -59,6 +59,7 @@ phone_a_friend(
 Get AI-powered feedback on planning documents using the **Master Review Framework** - a structured 10-point evaluation system.
 
 **Master Review Framework Dimensions:**
+
 - Structure & Organization
 - Completeness
 - Clarity
@@ -316,11 +317,13 @@ OPENAI_API_KEY=sk-...           # Only needed for local testing
 **Logging Modes:**
 
 **Development (DEBUG):**
+
 - Full API keys visible in logs (for debugging)
 - All request/response details logged
 - Complete header information
 
 **Production (INFO):**
+
 - API keys masked (first 8 + last 4 chars only)
 - Essential information only
 - Reduced sensitive data logging
@@ -415,6 +418,7 @@ pytest tests/test_tools.py::TestPhoneAFriend::test_phone_a_friend_basic -v
 ```
 
 **Test Coverage:**
+
 - ✅ 18 tests total
 - ✅ 8 unit tests (logging, utilities)
 - ✅ 10 integration tests (real OpenAI API calls)
@@ -423,6 +427,7 @@ pytest tests/test_tools.py::TestPhoneAFriend::test_phone_a_friend_basic -v
 - ✅ All 5 review levels tested
 
 **Requirements:**
+
 - Tests require `OPENAI_API_KEY` in `.env` file for integration tests
 - Unit tests run without API key
 - Tests automatically skip if API key not available
@@ -551,7 +556,7 @@ Automated code quality checks run on every commit:
 ```bash
 # Pre-commit automatically runs:
 → black      # Code formatting
-→ isort      # Import sorting  
+→ isort      # Import sorting
 → flake8     # Linting
 → mypy       # Type checking
 ```
@@ -601,6 +606,7 @@ See `plans/compare-options-tool.md` for an example plan.
 ## 📚 Documentation
 
 ### Core Documentation
+
 - **README.md** (this file) - Overview and quick start
 - **docs/LOGGING.md** - Comprehensive logging system guide
 - **docs/HEADER_IMPLEMENTATION.md** - Header-based configuration guide
@@ -608,13 +614,16 @@ See `plans/compare-options-tool.md` for an example plan.
 - **tests/README.md** - Testing documentation and examples
 
 ### Release Notes
+
 - **release_notes/RELEASE_NOTES_v0.1.2.md** - Latest release (current)
 - **release_notes/RELEASE_NOTES_v0.1.1.md** - Previous release
 
 ### Examples
+
 - **examples/server_with_headers.py** - HTTP header configuration example
 
 ### Planning Documents
+
 - **plans/** - Detailed planning documents and proposals
   - contextual-qa-mcp-server.md
   - technical-implementation.md
@@ -626,24 +635,28 @@ See `plans/compare-options-tool.md` for an example plan.
 ## ⭐ Features
 
 ### Master Review Framework
+
 - **10-point structured evaluation** for comprehensive plan analysis
 - **5 progressive review levels** from quick to expert
 - **FMEA-style failure analysis** in deep_dive mode
 - **Enterprise-grade reviews** with RACI, TCO, SLOs
 
 ### Comprehensive Logging
+
 - **Full request/response tracing** for debugging
 - **Environment-aware masking** (debug vs production)
 - **5+ log events per request** with structured JSON output
 - **API key validation** at every step
 
 ### Professional Testing
+
 - **92% code coverage** with 18 pytest tests
 - **10 integration tests** with real OpenAI API calls
 - **Automatic skipping** if API key not available
 - **Type-safe** with full mypy compliance
 
 ### Development Tools
+
 - **Pre-commit hooks** enforce code quality automatically
 - **Auto-activate venv** in VS Code/Cursor workspace
 - **Docker support** for easy deployment
