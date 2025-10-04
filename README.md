@@ -255,7 +255,6 @@ and focus_areas ["timeline", "implementation", "risks"]
          │
 ┌────────▼────────┐
 │    OpenAI       │
-│    (GPT-4)      │
 └─────────────────┘
 ```
 
