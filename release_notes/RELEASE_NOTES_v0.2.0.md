@@ -20,6 +20,7 @@ This release removes the `api_key` parameter from all tool calls and implements 
 ## ✨ What's New
 
 ### Header-Based Configuration
+
 - API keys are now extracted from `X-OpenAI-API-Key` HTTP header
 - `model` and `max_tokens` can be configured via headers: `X-OpenAI-Model` and `X-OpenAI-Max-Tokens`
 - Parameters can still override header values when explicitly provided
@@ -28,6 +29,7 @@ This release removes the `api_key` parameter from all tool calls and implements 
 ### Tool Signature Changes
 
 **Before (v0.1.x):**
+
 ```python
 phone_a_friend(
     question="What is Python?",
@@ -38,6 +40,7 @@ phone_a_friend(
 ```
 
 **After (v0.2.0):**
+
 ```python
 phone_a_friend(
     question="What is Python?",
@@ -50,6 +53,7 @@ phone_a_friend(
 ## 🔧 Changes
 
 ### Modified
+
 - `phone_a_friend` tool no longer accepts `api_key` parameter
 - `review_plan` tool no longer accepts `api_key` parameter
 - `model` parameter is now optional (defaults to header or "gpt-4")
@@ -57,13 +61,15 @@ phone_a_friend(
 - Updated logging to show configuration source (header vs parameter)
 
 ### Added
+
 - `get_config_from_headers()` function to extract configuration from HTTP headers
 - Support for `X-OpenAI-API-Key` header
-- Support for `X-OpenAI-Model` header  
+- Support for `X-OpenAI-Model` header
 - Support for `X-OpenAI-Max-Tokens` header
 - Import of `get_http_headers` from `fastmcp.server.dependencies`
 
 ### Updated
+
 - All tests to work without `api_key` parameter
 - Documentation to reflect header-based API key configuration
 - README.md with header-based configuration instructions
@@ -118,11 +124,13 @@ Remove the `api_key` parameter from all tool calls:
 ## 📋 Technical Details
 
 ### Implementation
+
 - Added header parsing using FastMCP's `get_http_headers()` function
 - OpenAI client is now created per-request with API key from headers
 - Configuration priority: explicit parameters > headers > defaults
 
 ### Testing
+
 - All existing tests updated and passing
 - Tests now rely on API key being passed via HTTP headers
 - No changes required to test functionality, only to test setup
@@ -130,6 +138,7 @@ Remove the `api_key` parameter from all tool calls:
 ## 📚 Documentation
 
 For more information, see:
+
 - [MCP Client Headers Documentation](../docs/MCP_CLIENT_HEADERS.md)
 - [Header Implementation Guide](../docs/HEADER_IMPLEMENTATION.md)
 
@@ -140,4 +149,3 @@ This release implements the standard MCP pattern for credential management, maki
 ---
 
 **Full Changelog**: https://github.com/bernierllc/brain-trust-mcp/compare/v0.1.1...v0.2.0
-
