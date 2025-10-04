@@ -1,0 +1,330 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		// Python Configuration
+		"python.defaultInterpreterPath": "./venv/bin/python",
+		"python.defaultInterpreter": "python3.11",
+		"python.terminal.activateEnvironment": true,
+		"python.terminal.activateEnvInCurrentTerminal": true,
+		"python.linting.enabled": true,
+		"python.linting.pylintEnabled": false,
+		"python.linting.flake8Enabled": true,
+		"python.linting.mypyEnabled": true,
+		"python.formatting.provider": "black",
+		"python.sortImports.args": ["--profile", "black"],
+		"python.analysis.typeCheckingMode": "basic",
+		"python.analysis.autoImportCompletions": true,
+		"python.analysis.autoSearchPaths": true,
+		"python.analysis.diagnosticMode": "workspace",
+
+		// Editor Configuration
+		"editor.formatOnSave": true,
+		"editor.formatOnPaste": true,
+		"editor.codeActionsOnSave": {
+			"source.organizeImports": "explicit",
+			"source.fixAll": "explicit"
+		},
+		"editor.rulers": [88],
+		"editor.tabSize": 4,
+		"editor.insertSpaces": true,
+		"editor.detectIndentation": false,
+		"editor.trimAutoWhitespace": true,
+		"files.trimTrailingWhitespace": true,
+		"files.insertFinalNewline": true,
+		"files.trimFinalNewlines": true,
+
+		// File Associations
+		"files.associations": {
+			"*.mdc": "markdown",
+			"fastmcp.json": "json",
+			"pyproject.toml": "toml",
+			"docker-compose.yml": "yaml",
+			"Dockerfile": "dockerfile"
+		},
+
+		// Exclude Patterns
+		"files.exclude": {
+			"**/__pycache__": true,
+			"**/*.pyc": true,
+			"**/.pytest_cache": true,
+			"**/.mypy_cache": true,
+			"**/venv": true,
+			"**/.venv": true,
+			"**/node_modules": true,
+			"**/.git": true,
+			"**/logs": true,
+			"**/*.log": true
+		},
+
+		// Search Configuration
+		"search.exclude": {
+			"**/__pycache__": true,
+			"**/*.pyc": true,
+			"**/.pytest_cache": true,
+			"**/.mypy_cache": true,
+			"**/venv": true,
+			"**/.venv": true,
+			"**/node_modules": true,
+			"**/logs": true,
+			"**/*.log": true,
+			"**/plans": true
+		},
+
+		// Terminal Configuration
+		"terminal.integrated.defaultProfile.osx": "bash",
+		"terminal.integrated.cwd": "${workspaceFolder}",
+		"terminal.integrated.env.osx": {
+			"PYTHONPATH": "${workspaceFolder}"
+		},
+
+		// Docker Configuration
+		"docker.showStartPage": false,
+		"docker.containers.groupBy": "project",
+
+		// JSON Configuration
+		"json.schemas": [
+			{
+				"fileMatch": ["fastmcp.json"],
+				"url": "https://gofastmcp.com/public/schemas/fastmcp.json/v1.json"
+			}
+		],
+
+		// Markdown Configuration
+		"markdown.preview.breaks": true,
+		"markdown.preview.linkify": true,
+
+		// Git Configuration
+		"git.enableSmartCommit": true,
+		"git.confirmSync": false,
+		"git.autofetch": true,
+
+		// Cursor AI Configuration
+		"cursor.cpp.disabledLanguages": ["plaintext"],
+		"cursor.general.enableCodeActions": true,
+		"cursor.chat.enableCodeActions": true,
+
+		// Testing Configuration
+		"python.testing.pytestEnabled": true,
+		"python.testing.unittestEnabled": false,
+		"python.testing.pytestArgs": [
+			"."
+		],
+		"python.testing.autoTestDiscoverOnSaveEnabled": true,
+
+		// Environment Variables
+		"python.envFile": "${workspaceFolder}/.env",
+
+		// Workspace-specific settings
+		"workbench.colorTheme": "Default Dark+",
+		"workbench.iconTheme": "vs-seti",
+		"workbench.startupEditor": "newUntitledFile",
+
+		// Extensions Recommendations
+		"extensions.recommendations": [
+			"ms-python.python",
+			"ms-python.flake8",
+			"ms-python.black-formatter",
+			"ms-python.isort",
+			"ms-python.mypy-type-checker",
+			"ms-vscode.vscode-json",
+			"redhat.vscode-yaml",
+			"ms-vscode.vscode-docker",
+			"ms-vscode-remote.remote-containers",
+			"ms-vscode.test-adapter-converter",
+			"littlefoxteam.vscode-python-test-adapter",
+			"ms-toolsai.jupyter",
+			"ms-toolsai.vscode-jupyter-cell-tags",
+			"ms-toolsai.vscode-jupyter-slideshow"
+		]
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-python.python",
+			"ms-python.flake8",
+			"ms-python.black-formatter",
+			"ms-python.isort",
+			"ms-python.mypy-type-checker",
+			"ms-vscode.vscode-json",
+			"redhat.vscode-yaml",
+			"ms-vscode.vscode-docker",
+			"ms-vscode-remote.remote-containers",
+			"ms-vscode.test-adapter-converter",
+			"littlefoxteam.vscode-python-test-adapter",
+			"ms-toolsai.jupyter",
+			"ms-toolsai.vscode-jupyter-cell-tags",
+			"ms-toolsai.vscode-jupyter-slideshow"
+		]
+	},
+	"tasks": {
+		"version": "2.0.0",
+		"tasks": [
+			{
+				"label": "Run MCP Server",
+				"type": "shell",
+				"command": "python",
+				"args": ["server.py"],
+				"group": "build",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				},
+				"options": {
+					"env": {
+						"PYTHONPATH": "${workspaceFolder}"
+					}
+				}
+			},
+			{
+				"label": "Run Tests",
+				"type": "shell",
+				"command": "pytest",
+				"args": ["-v", "--cov=server"],
+				"group": "test",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Format Code",
+				"type": "shell",
+				"command": "black",
+				"args": ["."],
+				"group": "build",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Sort Imports",
+				"type": "shell",
+				"command": "isort",
+				"args": ["."],
+				"group": "build",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Type Check",
+				"type": "shell",
+				"command": "mypy",
+				"args": ["server.py"],
+				"group": "build",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Docker Build",
+				"type": "shell",
+				"command": "docker",
+				"args": ["build", "-t", "mcp-ask-questions", "."],
+				"group": "build",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Docker Compose Up",
+				"type": "shell",
+				"command": "docker-compose",
+				"args": ["up", "-d"],
+				"group": "build",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Docker Compose Down",
+				"type": "shell",
+				"command": "docker-compose",
+				"args": ["down"],
+				"group": "build",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			},
+			{
+				"label": "Test Server",
+				"type": "shell",
+				"command": "python",
+				"args": ["test_server.py"],
+				"group": "test",
+				"presentation": {
+					"echo": true,
+					"reveal": "always",
+					"focus": false,
+					"panel": "new"
+				}
+			}
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Run MCP Server",
+				"type": "python",
+				"request": "launch",
+				"program": "${workspaceFolder}/server.py",
+				"console": "integratedTerminal",
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}"
+				},
+				"args": []
+			},
+			{
+				"name": "Test Server",
+				"type": "python",
+				"request": "launch",
+				"program": "${workspaceFolder}/test_server.py",
+				"console": "integratedTerminal",
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}"
+				},
+				"args": []
+			},
+			{
+				"name": "Debug MCP Server",
+				"type": "python",
+				"request": "launch",
+				"program": "${workspaceFolder}/server.py",
+				"console": "integratedTerminal",
+				"env": {
+					"PYTHONPATH": "${workspaceFolder}",
+					"LOG_LEVEL": "DEBUG"
+				},
+				"args": [],
+				"stopOnEntry": false,
+				"justMyCode": true
+			}
+		]
+	}
+}
