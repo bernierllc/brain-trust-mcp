@@ -24,9 +24,6 @@
     "path": "/mcp",
     "log_level": "INFO",
     "env": {
-      "OPENAI_API_KEY": "${OPENAI_API_KEY}",
-      "OPENAI_MODEL": "${OPENAI_MODEL}",
-      "OPENAI_MAX_TOKENS": "${OPENAI_MAX_TOKENS}",
       "LOG_LEVEL": "${LOG_LEVEL}"
     },
     "cwd": "/app"

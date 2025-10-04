@@ -1,0 +1,24 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E501
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .tox,
+    logs
+
+# Align with Black
+# E203: whitespace before ':'
+# E266: too many leading '#' for block comment
+# E501: line too long (let Black handle this)
+# W503: line break before binary operator
+per-file-ignores =
+    __init__.py:F401
+

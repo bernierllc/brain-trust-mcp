@@ -73,6 +73,7 @@ Desktop.ini
 *.old
 tmp/
 temp/
+release_notes/
 
 # Database
 *.db

@@ -3,9 +3,7 @@
 Contextual Q&A MCP Server with OpenAI integration and plan review capabilities.
 """
 
-import asyncio
 import json
-import os
 from datetime import datetime
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional
@@ -26,7 +24,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -39,29 +37,22 @@ logger = structlog.get_logger()
 # Initialize FastMCP server
 mcp = FastMCP("brain-trust")
 
-# Configure OpenAI client
-openai_client = None
+# Note: OpenAI client is created per-request with API key from tool parameters
 
-def initialize_openai():
-    """Initialize OpenAI client with API key from environment."""
-    global openai_client
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is required")
-
-    openai_client = openai.OpenAI(api_key=api_key)
-    logger.info("OpenAI client initialized successfully")
 
 # Data Models
 class ReviewLevel(str, Enum):
     """Review levels for plan analysis."""
-    QUICK = "quick"           # Basic structure and completeness
-    STANDARD = "standard"     # Detailed analysis with suggestions
+
+    QUICK = "quick"  # Basic structure and completeness
+    STANDARD = "standard"  # Detailed analysis with suggestions
     COMPREHENSIVE = "comprehensive"  # Deep analysis with alternatives
-    EXPERT = "expert"         # Professional-level review with best practices
+    EXPERT = "expert"  # Professional-level review with best practices
+
 
 class PlanReview(BaseModel):
     """Plan review result."""
+
     plan_id: str
     review_level: ReviewLevel
     overall_score: float
@@ -71,65 +62,100 @@ class PlanReview(BaseModel):
     detailed_feedback: str
     reviewed_at: datetime = Field(default_factory=datetime.now)
 
+
 # In-memory storage for plan reviews
 plan_reviews: Dict[str, PlanReview] = {}
+
 
 # OpenAI Integration Tools
 @mcp.tool()
 async def phone_a_friend(
     question: Annotated[str, "The question to ask OpenAI"],
-    context: Annotated[Optional[str], "Optional context information to provide background for the question"] = None
+    api_key: Annotated[str, "OpenAI API key for authentication"],
+    context: Annotated[
+        Optional[str],
+        "Optional context information to provide background for the question",
+    ] = None,
+    model: Annotated[str, "OpenAI model to use"] = "gpt-4",
+    max_tokens: Annotated[int, "Maximum tokens for response"] = 1000,
 ) -> str:
     """Phone a friend (OpenAI) to get help with a question."""
-    if not openai_client:
-        initialize_openai()
+    # Create OpenAI client with provided API key
+    client = openai.OpenAI(api_key=api_key)
 
     # Build prompt with optional context
     if context:
-        prompt = f"Context: {context}\n\nQuestion: {question}\n\nPlease provide a comprehensive answer."
+        prompt = (
+            f"Context: {context}\n\n"
+            f"Question: {question}\n\n"
+            f"Please provide a comprehensive answer."
+        )
     else:
         prompt = f"Question: {question}\n\nPlease provide a comprehensive answer."
 
     try:
-        response = openai_client.chat.completions.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-4"),
+        response = client.chat.completions.create(
+            model=model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=int(os.getenv("OPENAI_MAX_TOKENS", "1000")),
-            temperature=0.3
+            max_tokens=max_tokens,
+            temperature=0.3,
         )
 
-        answer = response.choices[0].message.content.strip()
+        answer = response.choices[0].message.content
+        if not answer:
+            raise ValueError("Empty response from OpenAI")
 
         logger.info("Friend called successfully", question=question[:50])
-        return answer
+        result: str = answer.strip()
+        return result
 
     except Exception as e:
         logger.error("Failed to phone a friend", error=str(e))
         raise
 
+
 # Plan Review Tool
 @mcp.tool()
 async def review_plan(
     plan_content: Annotated[str, "The full content of the plan document to review"],
-    review_level: Annotated[ReviewLevel, "Level of review depth: 'quick', 'standard', 'comprehensive', or 'expert'"] = ReviewLevel.STANDARD,
-    context: Annotated[Optional[str], "Optional context information about the project, team, or constraints"] = None,
+    api_key: Annotated[str, "OpenAI API key for authentication"],
+    review_level: Annotated[
+        ReviewLevel,
+        "Level of review depth: 'quick', 'standard', 'comprehensive', or 'expert'",
+    ] = ReviewLevel.STANDARD,
+    context: Annotated[
+        Optional[str],
+        "Optional context information about the project, team, or constraints",
+    ] = None,
     plan_id: Annotated[Optional[str], "Optional identifier for the plan"] = None,
-    focus_areas: Annotated[Optional[List[str]], "Specific areas to focus on (e.g., 'timeline', 'resources', 'risks', 'budget', 'stakeholders')"] = None
+    focus_areas: Annotated[
+        Optional[List[str]],
+        (
+            "Specific areas to focus on "
+            "(e.g., 'timeline', 'resources', 'risks', 'budget')"
+        ),
+    ] = None,
+    model: Annotated[str, "OpenAI model to use"] = "gpt-4",
+    max_tokens: Annotated[int, "Maximum tokens for response"] = 2000,
 ) -> Dict[str, Any]:
     """
     Review a plan file and provide feedback based on the specified review level.
 
     Args:
         plan_content: The content of the plan file to review
+        api_key: OpenAI API key for authentication
         review_level: Level of review depth (quick, standard, comprehensive, expert)
+        context: Optional context information about the project, team, or constraints
         plan_id: Optional identifier for the plan
         focus_areas: Optional list of specific areas to focus the review on
+        model: OpenAI model to use (default: gpt-4)
+        max_tokens: Maximum tokens for response (default: 2000)
 
     Returns:
         Dictionary containing review results and feedback
     """
-    if not openai_client:
-        initialize_openai()
+    # Create OpenAI client with provided API key
+    client = openai.OpenAI(api_key=api_key)
 
     # Generate plan ID if not provided
     if not plan_id:
@@ -178,14 +204,15 @@ async def review_plan(
         - Competitive analysis and positioning
 
         Provide expert-level insights and recommendations with industry context.
-        """
+        """,
     }
 
     base_prompt = review_prompts[review_level]
 
     # Add focus areas if specified
     if focus_areas:
-        focus_text = f"\n\nFocus the review specifically on these areas: {', '.join(focus_areas)}"
+        areas = ", ".join(focus_areas)
+        focus_text = f"\n\nFocus the review specifically on these areas: {areas}"
         base_prompt += focus_text
 
     # Add context if provided
@@ -210,21 +237,24 @@ async def review_plan(
     """
 
     try:
-        response = openai_client.chat.completions.create(
-            model=os.getenv("OPENAI_MODEL", "gpt-4"),
+        response = client.chat.completions.create(
+            model=model,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=int(os.getenv("OPENAI_MAX_TOKENS", "2000")),
-            temperature=0.3
+            max_tokens=max_tokens,
+            temperature=0.3,
         )
 
         # Parse JSON response
-        review_text = response.choices[0].message.content.strip()
+        review_content = response.choices[0].message.content
+        if not review_content:
+            raise ValueError("Empty response from OpenAI")
+        review_text: str = review_content.strip()
 
         # Try to extract JSON from the response
         try:
             # Look for JSON in the response
-            start_idx = review_text.find('{')
-            end_idx = review_text.rfind('}') + 1
+            start_idx = review_text.find("{")
+            end_idx = review_text.rfind("}") + 1
             if start_idx != -1 and end_idx != 0:
                 json_text = review_text[start_idx:end_idx]
                 review_data = json.loads(json_text)
@@ -235,7 +265,7 @@ async def review_plan(
                     "strengths": ["Plan structure is present"],
                     "weaknesses": ["Unable to parse detailed review"],
                     "suggestions": ["Review the plan manually"],
-                    "detailed_feedback": review_text
+                    "detailed_feedback": review_text,
                 }
         except json.JSONDecodeError:
             # Fallback if JSON parsing fails
@@ -244,7 +274,7 @@ async def review_plan(
                 "strengths": ["Plan structure is present"],
                 "weaknesses": ["Unable to parse detailed review"],
                 "suggestions": ["Review the plan manually"],
-                "detailed_feedback": review_text
+                "detailed_feedback": review_text,
             }
 
         # Create plan review object
@@ -255,13 +285,18 @@ async def review_plan(
             strengths=review_data.get("strengths", []),
             weaknesses=review_data.get("weaknesses", []),
             suggestions=review_data.get("suggestions", []),
-            detailed_feedback=review_data.get("detailed_feedback", review_text)
+            detailed_feedback=review_data.get("detailed_feedback", review_text),
         )
 
         # Store the review
         plan_reviews[plan_id] = plan_review
 
-        logger.info("Plan reviewed", plan_id=plan_id, review_level=review_level, score=plan_review.overall_score)
+        logger.info(
+            "Plan reviewed",
+            plan_id=plan_id,
+            review_level=review_level,
+            score=plan_review.overall_score,
+        )
 
         return {
             "plan_id": plan_id,
@@ -271,12 +306,13 @@ async def review_plan(
             "weaknesses": plan_review.weaknesses,
             "suggestions": plan_review.suggestions,
             "detailed_feedback": plan_review.detailed_feedback,
-            "reviewed_at": plan_review.reviewed_at.isoformat()
+            "reviewed_at": plan_review.reviewed_at.isoformat(),
         }
 
     except Exception as e:
         logger.error("Failed to review plan", error=str(e), plan_id=plan_id)
         raise
+
 
 # Health check endpoint
 @mcp.tool()
@@ -285,16 +321,12 @@ async def health_check() -> Dict[str, Any]:
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "openai_configured": openai_client is not None,
-        "plan_reviews_count": len(plan_reviews)
+        "plan_reviews_count": len(plan_reviews),
     }
 
-# Initialize OpenAI on startup
-try:
-    initialize_openai()
-    logger.info("MCP server initialized successfully")
-except Exception as e:
-    logger.error("Failed to initialize MCP server", error=str(e))
+
+# Server startup logging
+logger.info("MCP server initialized successfully")
 
 if __name__ == "__main__":
     # Run the server

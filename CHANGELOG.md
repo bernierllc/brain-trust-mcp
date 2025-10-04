@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-10-04
+
+### Changed
+
+- **BREAKING**: Refactored authentication architecture to pass OpenAI API key per-request instead of at server startup
+- `phone_a_friend` now requires `api_key` parameter and accepts optional `model` and `max_tokens` parameters
+- `review_plan` now requires `api_key` parameter and accepts optional `model` and `max_tokens` parameters
+- `health_check` no longer returns `openai_configured` field
+- Updated README with comprehensive documentation of new per-request authentication flow
+- Updated MCP client configuration examples to reflect API key passing from client
+
+### Removed
+
+- Removed `OPENAI_API_KEY`, `OPENAI_MODEL`, and `OPENAI_MAX_TOKENS` from Docker environment variables
+- Removed global OpenAI client initialization at server startup
+- Removed API key requirement from `.env.example` file
+- Removed `OPENAI_*` environment variables from `fastmcp.json` deployment configuration
+
+### Security
+
+- **Improved**: API keys are no longer stored in Docker containers or environment files
+- **Improved**: Per-request authentication allows different MCP clients to use different API keys
+- **Improved**: API key management handled securely by MCP client configuration
+- **Improved**: Server no longer requires access to OpenAI credentials at startup
+
+### Fixed
+
+- Server now starts successfully without requiring OpenAI API key configuration
+- Cleaned up unused imports (`asyncio`, `os`) from server.py
+
 ## [0.1.0] - 2025-10-04
 
 ### Added
@@ -22,4 +52,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependabot configuration for pip and GitHub Actions
 - Smoke test script (`scripts/smoke.sh`) for health endpoint validation
 
+[0.1.1]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.1.1
 [0.1.0]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.1.0
