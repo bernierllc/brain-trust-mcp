@@ -1,0 +1,25 @@
+{
+  "name": "project",
+  "version": "1.0.0",
+  "description": "[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/bernierllc/brain-trust-mcp/releases) [![Tests](https://img.shields.io/badge/tests-18%20passed-success.svg)](./tests) [![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen.svg)](./tests) [![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://python.org)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vite": "^7.1.9"
+  }
+}

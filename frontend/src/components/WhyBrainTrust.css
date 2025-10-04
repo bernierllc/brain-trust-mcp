@@ -1,0 +1,93 @@
+.why-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 24px;
+  background-color: white;
+}
+
+.why-title {
+  font-size: 36px;
+  font-weight: 700;
+  color: #292524;
+  margin-bottom: 48px;
+  text-align: center;
+}
+
+.benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 32px;
+  margin-bottom: 48px;
+}
+
+.benefit-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.benefit-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #059669;
+  margin-bottom: 8px;
+}
+
+.benefit-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.benefit-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.benefit-item strong {
+  font-size: 16px;
+  font-weight: 600;
+  color: #292524;
+}
+
+.benefit-item p {
+  font-size: 14px;
+  color: #57534e;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.stats-container {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 48px;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-number {
+  font-size: 48px;
+  font-weight: 700;
+  color: #059669;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #57534e;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .benefit-grid {
+    grid-template-columns: 1fr;
+  }
+}

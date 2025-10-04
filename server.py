@@ -8,10 +8,14 @@ import logging
 import os
 from datetime import datetime
 from enum import Enum
+from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
 
 import openai
 import structlog
+from fastapi import HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_headers
 from pydantic import BaseModel, Field
@@ -45,6 +49,14 @@ logger = structlog.get_logger()
 
 # Initialize FastMCP server
 mcp = FastMCP("brain-trust")
+
+# Get the app instance for custom routes
+app = mcp.app
+
+# Serve static files from dist directory
+dist_path = Path(__file__).parent / "dist"
+if dist_path.exists():
+    app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
 
 
 def get_config_from_headers() -> Dict[str, Any]:
@@ -679,6 +691,170 @@ async def health_check() -> Dict[str, Any]:
         "timestamp": datetime.now().isoformat(),
         "plan_reviews_count": len(plan_reviews),
     }
+
+
+# REST API endpoints for interactive demo
+class DemoRequest(BaseModel):
+    """Request model for demo API endpoints."""
+
+    question: Optional[str] = None
+    context: Optional[str] = None
+    plan_content: Optional[str] = None
+    review_level: Optional[str] = "standard"
+    focus_areas: Optional[List[str]] = None
+    api_key: str
+
+
+@app.post("/api/demo/phone-a-friend")
+async def demo_phone_a_friend(request: DemoRequest) -> JSONResponse:
+    """REST API endpoint for phone_a_friend demo."""
+    try:
+        if not request.question:
+            raise HTTPException(status_code=400, detail="Question is required")
+        if not request.api_key:
+            raise HTTPException(status_code=400, detail="API key is required")
+
+        if request.context:
+            prompt = (
+                f"Context: {request.context}\n\n"
+                f"Question: {request.question}\n\n"
+                f"Please provide a comprehensive answer."
+            )
+        else:
+            prompt = (
+                f"Question: {request.question}\n\n"
+                f"Please provide a comprehensive answer."
+            )
+
+        messages = [{"role": "user", "content": prompt}]
+
+        client = openai.OpenAI(api_key=request.api_key)
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            max_tokens=1000,
+            temperature=0.3,
+        )
+
+        answer = response.choices[0].message.content
+        if not answer:
+            raise HTTPException(status_code=500, detail="Empty response from OpenAI")
+
+        return JSONResponse(content={"answer": answer.strip()})
+
+    except openai.AuthenticationError:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    except openai.RateLimitError:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    except Exception as e:
+        logger.error("Demo API error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/demo/review-plan")
+async def demo_review_plan(request: DemoRequest) -> JSONResponse:
+    """REST API endpoint for review_plan demo."""
+    try:
+        if not request.plan_content:
+            raise HTTPException(status_code=400, detail="Plan content is required")
+        if not request.api_key:
+            raise HTTPException(status_code=400, detail="API key is required")
+
+        review_level = ReviewLevel(request.review_level or "standard")
+
+        review_prompts = {
+            ReviewLevel.QUICK: "Provide a quick review focusing on structure and completeness.",
+            ReviewLevel.STANDARD: "Provide a standard review covering key areas.",
+            ReviewLevel.COMPREHENSIVE: "Provide a comprehensive review with detailed analysis.",
+            ReviewLevel.DEEP_DIVE: "Provide a deep-dive technical review.",
+            ReviewLevel.EXPERT: "Provide an expert-level professional review.",
+        }
+
+        prompt = f"""
+        {review_prompts[review_level]}
+
+        Plan Content:
+        {request.plan_content}
+
+        Please provide your review in JSON format:
+        {{
+            "overall_score": 0.0-1.0,
+            "strengths": ["strength1", "strength2"],
+            "weaknesses": ["weakness1", "weakness2"],
+            "suggestions": ["suggestion1", "suggestion2"],
+            "detailed_feedback": "comprehensive feedback text"
+        }}
+        """
+
+        messages = [{"role": "user", "content": prompt}]
+
+        client = openai.OpenAI(api_key=request.api_key)
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=messages,
+            max_tokens=2000,
+            temperature=0.3,
+        )
+
+        review_content = response.choices[0].message.content
+        if not review_content:
+            raise HTTPException(status_code=500, detail="Empty response from OpenAI")
+
+        review_text = review_content.strip()
+
+        try:
+            start_idx = review_text.find("{")
+            end_idx = review_text.rfind("}") + 1
+            if start_idx != -1 and end_idx != 0:
+                json_text = review_text[start_idx:end_idx]
+                review_data = json.loads(json_text)
+            else:
+                review_data = {
+                    "overall_score": 0.7,
+                    "strengths": ["Plan structure is present"],
+                    "weaknesses": ["Unable to parse detailed review"],
+                    "suggestions": ["Review the plan manually"],
+                    "detailed_feedback": review_text,
+                }
+        except json.JSONDecodeError:
+            review_data = {
+                "overall_score": 0.7,
+                "strengths": ["Plan structure is present"],
+                "weaknesses": ["Unable to parse detailed review"],
+                "suggestions": ["Review the plan manually"],
+                "detailed_feedback": review_text,
+            }
+
+        return JSONResponse(content=review_data)
+
+    except openai.AuthenticationError:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    except openai.RateLimitError:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    except Exception as e:
+        logger.error("Demo API error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/demo/health")
+async def demo_health() -> JSONResponse:
+    """REST API endpoint for health check demo."""
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "plan_reviews_count": len(plan_reviews),
+        }
+    )
+
+
+@app.get("/")
+async def serve_homepage() -> FileResponse:
+    """Serve the homepage."""
+    index_path = dist_path / "index.html"
+    if index_path.exists():
+        return FileResponse(str(index_path))
+    return FileResponse("frontend/index.html")
 
 
 # Server startup logging

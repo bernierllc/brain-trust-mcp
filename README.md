@@ -9,6 +9,8 @@
 
 A simple, powerful FastMCP server with just 3 tools that connect Cursor to OpenAI for intelligent question answering and structured plan analysis using the Master Review Framework.
 
+**NEW**: 🌐 **[Interactive Homepage](http://localhost:8000)** - Try brain-trust in your browser with installation guides for 8+ IDEs!
+
 ---
 
 ## 🎉 What's New in v0.1.2

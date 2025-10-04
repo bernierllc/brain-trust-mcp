@@ -1,4 +1,22 @@
-# Use Python 3.12 slim image
+# Multi-stage build: Frontend builder
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm install
+
+# Copy frontend source
+COPY frontend ./frontend
+COPY vite.config.js ./
+
+# Build frontend
+RUN npm run build
+
+# Main stage: Python server
 FROM python:3.12-slim
 
 # Set working directory
@@ -21,6 +39,9 @@ RUN uv pip install --system -r requirements.txt
 
 # Copy source code
 COPY . .
+
+# Copy built frontend from builder stage
+COPY --from=frontend-builder /app/dist ./dist
 
 # Create non-root user for security
 RUN useradd -m -u 1000 mcpuser && chown -R mcpuser:mcpuser /app
