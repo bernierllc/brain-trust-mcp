@@ -65,11 +65,11 @@ review_plan(
 
 ### 3. ❤️ `health_check`
 
-Check server status and OpenAI configuration.
+Check server status and configuration.
 
 ```python
 health_check()
-# Returns: {status, timestamp, openai_configured, plan_reviews_count}
+# Returns: {status, timestamp, plan_reviews_count}
 ```
 
 ---
@@ -89,12 +89,14 @@ health_check()
 git clone <repository-url>
 cd mcp-ask-questions
 
-# Start the server
+# Start the server (no API key needed)
 docker-compose up -d
 
 # Check logs
 docker-compose logs -f
 ```
+
+The server starts immediately without requiring an OpenAI API key. Configure the API key in your MCP client (see below).
 
 ### Option 2: Local Python
 
@@ -138,14 +140,18 @@ Go to `Cursor Settings` -> `MCP` -> `Add new MCP Server`. Name it "brain-trust",
       "url": "http://localhost:8000/mcp",
       "transport": "http",
       "env": {
-        "OPENAI_API_KEY": "your_openai_api_key_here",
-        "OPENAI_MODEL": "gpt-4",
-        "OPENAI_MAX_TOKENS": "2000"
+        "OPENAI_API_KEY": "your_openai_api_key_here"
       }
     }
   }
 }
 ```
+
+**How it works:**
+
+- The `OPENAI_API_KEY` from the MCP client configuration is automatically passed to each tool call
+- The server receives the API key with each request and uses it to authenticate with OpenAI
+- Optional: You can override the model and max_tokens per tool call
 
 **Important**: Make sure Docker is running and the server is started before using in Cursor!
 
@@ -215,11 +221,12 @@ and focus_areas ["timeline", "implementation", "risks"]
 
 **Flow:**
 
-1. Agent calls MCP tool (phone_a_friend or review_plan)
-2. brain-trust server receives request via HTTP
-3. Server formats prompt and calls OpenAI API
-4. OpenAI returns AI-generated response
-5. Server returns structured response to agent
+1. Agent calls MCP tool with API key from MCP client config
+2. brain-trust server receives request with API key via HTTP
+3. Server creates OpenAI client with provided API key
+4. Server formats prompt and calls OpenAI API
+5. OpenAI returns AI-generated response
+6. Server returns structured response to agent
 
 ---
 
@@ -252,31 +259,47 @@ docker-compose down
 
 ### Environment Variables
 
-Create a `.env` file or set these in your MCP configuration:
+The server requires minimal configuration. Create a `.env` file if needed:
 
 ```bash
-# OpenAI Configuration (Required)
-OPENAI_API_KEY=your_api_key_here
-
-# Optional Settings
-OPENAI_MODEL=gpt-4                # Default: gpt-4
-OPENAI_MAX_TOKENS=2000            # Default: 1000
+# Server Configuration
 LOG_LEVEL=INFO                    # Default: INFO
+PORT=8000                         # Default: 8000
 ```
 
-### MCP Settings (Recommended)
+**Note:** OpenAI API key is **NOT** required as an environment variable. The API key is passed directly from the MCP client with each tool call.
 
-Pass the API key through Cursor's MCP settings rather than hardcoding:
+### MCP Client Configuration (Required)
+
+Configure your OpenAI API key in the MCP client settings (e.g., Cursor's `~/.cursor/mcp.json`):
 
 ```json
 {
-  "env": {
-    "OPENAI_API_KEY": "your_actual_api_key_here"
+  "mcpServers": {
+    "brain-trust": {
+      "url": "http://localhost:8000/mcp",
+      "transport": "http",
+      "env": {
+        "OPENAI_API_KEY": "your_actual_api_key_here"
+      }
+    }
   }
 }
 ```
 
-This keeps your API key secure and makes the server reusable.
+**How it works:**
+
+1. You configure the API key in your MCP client
+2. The MCP client automatically passes the key to tool calls
+3. The server uses the key to authenticate with OpenAI per-request
+4. No API key storage on the server side
+
+**Benefits:**
+
+- ✅ No API keys in Docker containers or environment files
+- ✅ Secure key management via MCP client
+- ✅ Different clients can use different API keys
+- ✅ Per-request authentication
 
 ---
 
@@ -291,7 +314,7 @@ Test the health endpoint:
 
 ```bash
 curl http://localhost:8000/health
-# Returns: {"status":"healthy","timestamp":"...","openai_configured":true}
+# Returns: {"status":"healthy","timestamp":"...","plan_reviews_count":0}
 ```
 
 ---
@@ -336,11 +359,13 @@ mcp-ask-questions/
 
 ## 🔒 Security
 
-- ✅ **No hardcoded API keys** - Use MCP settings or environment variables
+- ✅ **No API keys in Docker** - API keys are passed per-request from MCP client
+- ✅ **No environment file secrets** - No `.env` file with API keys required
+- ✅ **Per-request authentication** - Each request uses client-provided credentials
 - ✅ **Non-root Docker user** - Runs as `mcpuser` in container
-- ✅ **Environment variable support** - Secure credential management
 - ✅ **Input validation** - Pydantic models validate all inputs
 - ✅ **Error handling** - Comprehensive error handling and logging
+- ✅ **Client-side key management** - Keys managed securely by MCP client
 
 ---
 
@@ -361,13 +386,23 @@ docker-compose logs -f
 1. Verify server is running: `curl http://localhost:8000/health`
 2. Check MCP config in `~/.cursor/mcp.json`
 3. Restart Cursor after config changes
-4. Ensure `OPENAI_API_KEY` is set in MCP config
+4. Ensure `OPENAI_API_KEY` is set in MCP client config
 
 ### OpenAI API errors
 
-1. Verify API key is correct and active
+1. Verify API key is correct and active in `~/.cursor/mcp.json`
 2. Check OpenAI account has credits
-3. View logs: `docker-compose logs -f`
+3. Ensure API key has proper permissions
+4. View logs: `docker-compose logs -f`
+
+### "API key required" errors
+
+The API key must be configured in your **MCP client** (not in Docker):
+
+1. Open `~/.cursor/mcp.json`
+2. Add `OPENAI_API_KEY` to the `env` section
+3. Restart Cursor
+4. The API key is automatically passed with each tool call
 
 ### Tools not showing in Cursor
 
@@ -385,11 +420,13 @@ docker-compose logs -f
 # Install dependencies
 pip install -r requirements.txt
 
-# Run server locally
+# Run server locally (no API key needed for startup)
 python server.py
 
 # Server runs on http://localhost:8000
 ```
+
+**Note:** The server starts without requiring an OpenAI API key. The API key is provided by the MCP client when calling tools.
 
 ### Making Changes
 
