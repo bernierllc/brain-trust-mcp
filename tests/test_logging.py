@@ -107,9 +107,7 @@ class TestLogging:
             model="gpt-4",
         )
 
-    def test_log_mcp_call_with_sensitive_data(
-        self, test_environment: None
-    ) -> None:
+    def test_log_mcp_call_with_sensitive_data(self, test_environment: None) -> None:
         """Test that sensitive data is properly handled in logging."""
         api_key = "sk-proj-sensitive-key-1234567890"
 

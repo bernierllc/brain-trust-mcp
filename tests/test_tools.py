@@ -96,9 +96,7 @@ class TestReviewPlan:
         """
 
     @pytest.mark.asyncio
-    async def test_review_plan_quick(
-        self, api_key: str, sample_plan: str
-    ) -> None:
+    async def test_review_plan_quick(self, api_key: str, sample_plan: str) -> None:
         """Test quick review level."""
         result = await review_plan(
             plan_content=sample_plan,
@@ -119,9 +117,7 @@ class TestReviewPlan:
         assert result["review_level"] == "quick"
 
     @pytest.mark.asyncio
-    async def test_review_plan_standard(
-        self, api_key: str, sample_plan: str
-    ) -> None:
+    async def test_review_plan_standard(self, api_key: str, sample_plan: str) -> None:
         """Test standard review level."""
         result = await review_plan(
             plan_content=sample_plan,
@@ -139,9 +135,7 @@ class TestReviewPlan:
         assert isinstance(result["suggestions"], list)
 
     @pytest.mark.asyncio
-    async def test_review_plan_deep_dive(
-        self, api_key: str, sample_plan: str
-    ) -> None:
+    async def test_review_plan_deep_dive(self, api_key: str, sample_plan: str) -> None:
         """Test deep_dive review level."""
         result = await review_plan(
             plan_content=sample_plan,
@@ -195,9 +189,7 @@ class TestReviewPlan:
         assert len(result["detailed_feedback"]) > 0
 
     @pytest.mark.asyncio
-    async def test_review_plan_all_levels(
-        self, api_key: str, sample_plan: str
-    ) -> None:
+    async def test_review_plan_all_levels(self, api_key: str, sample_plan: str) -> None:
         """Test all review levels."""
         levels = [
             ReviewLevel.QUICK,
