@@ -13,6 +13,7 @@ from typing import Annotated, Any, Dict, List, Optional
 import openai
 import structlog
 from fastmcp import FastMCP
+from fastmcp.server.dependencies import get_http_headers
 from pydantic import BaseModel, Field
 
 # Get environment and log level from environment variables
@@ -45,7 +46,37 @@ logger = structlog.get_logger()
 # Initialize FastMCP server
 mcp = FastMCP("brain-trust")
 
-# Note: OpenAI client is created per-request with API key from tool parameters
+
+def get_config_from_headers() -> Dict[str, Any]:
+    """Extract configuration from HTTP headers."""
+    headers = get_http_headers()
+
+    config: Dict[str, Any] = {}
+
+    # Read API key from header
+    if api_key := headers.get("x-openai-api-key"):
+        config["api_key"] = api_key
+
+    # Read model from header
+    if model := headers.get("x-openai-model"):
+        config["model"] = model
+
+    # Read max tokens from header
+    if max_tokens_str := headers.get("x-openai-max-tokens"):
+        try:
+            config["max_tokens"] = int(max_tokens_str)
+        except ValueError:
+            logger.warning(f"Invalid max_tokens header: {max_tokens_str}")
+
+    logger.debug(
+        "Configuration from headers",
+        has_api_key=bool(config.get("api_key")),
+        api_key_length=len(config.get("api_key", "")),
+        model=config.get("model"),
+        max_tokens=config.get("max_tokens"),
+    )
+
+    return config
 
 
 # Helper functions for logging
@@ -142,33 +173,40 @@ plan_reviews: Dict[str, PlanReview] = {}
 @mcp.tool()
 async def phone_a_friend(
     question: Annotated[str, "The question to ask OpenAI"],
-    api_key: Annotated[str, "OpenAI API key for authentication"],
     context: Annotated[
         Optional[str],
         "Optional context information to provide background for the question",
     ] = None,
-    model: Annotated[str, "OpenAI model to use"] = "gpt-4",
-    max_tokens: Annotated[int, "Maximum tokens for response"] = 1000,
+    model: Annotated[
+        Optional[str], "OpenAI model to use (optional if set in headers)"
+    ] = None,
+    max_tokens: Annotated[
+        Optional[int], "Maximum tokens for response (optional if set in headers)"
+    ] = None,
 ) -> str:
     """Phone a friend (OpenAI) to get help with a question."""
+    # Get configuration from headers
+    header_config = get_config_from_headers()
+
+    # Use parameters if provided, otherwise fall back to headers
+    final_api_key = header_config.get("api_key")
+    final_model = model or header_config.get("model", "gpt-4")
+    final_max_tokens = max_tokens or header_config.get("max_tokens", 1000)
+
+    # Validate API key is available
+    if not final_api_key:
+        raise ValueError("API key must be provided in X-OpenAI-API-Key header")
+
     # Log incoming MCP call
     log_mcp_call(
         "phone_a_friend",
         question=question[:100] if len(question) > 100 else question,
-        api_key=api_key,
         context=context[:100] if context and len(context) > 100 else context,
-        model=model,
-        max_tokens=max_tokens,
+        model=final_model,
+        model_source="parameter" if model else "header",
+        max_tokens=final_max_tokens,
+        max_tokens_source="parameter" if max_tokens else "header",
     )
-
-    # Create OpenAI client with provided API key
-    logger.debug(
-        "Creating OpenAI client",
-        api_key_provided=bool(api_key),
-        api_key_length=len(api_key) if api_key else 0,
-        api_key_masked=mask_api_key(api_key),
-    )
-    client = openai.OpenAI(api_key=api_key)
 
     # Build prompt with optional context
     if context:
@@ -183,13 +221,16 @@ async def phone_a_friend(
     messages = [{"role": "user", "content": prompt}]
 
     try:
+        # Create OpenAI client with API key from headers
+        client = openai.OpenAI(api_key=final_api_key)
+
         # Log OpenAI request
-        log_openai_request(model, messages, max_tokens, api_key)
+        log_openai_request(final_model, messages, final_max_tokens, final_api_key)
 
         response = client.chat.completions.create(
-            model=model,
+            model=final_model,
             messages=messages,  # type: ignore[arg-type]
-            max_tokens=max_tokens,
+            max_tokens=final_max_tokens,
             temperature=0.3,
         )
 
@@ -209,8 +250,8 @@ async def phone_a_friend(
             "Failed to phone a friend",
             error=str(e),
             error_type=type(e).__name__,
-            api_key_provided=bool(api_key),
-            api_key_length=len(api_key) if api_key else 0,
+            api_key_provided=bool(final_api_key),
+            api_key_length=len(final_api_key) if final_api_key else 0,
         )
         raise
 
@@ -219,7 +260,6 @@ async def phone_a_friend(
 @mcp.tool()
 async def review_plan(
     plan_content: Annotated[str, "The full content of the plan document to review"],
-    api_key: Annotated[str, "OpenAI API key for authentication"],
     review_level: Annotated[
         ReviewLevel,
         "Level of review depth: 'quick', 'standard', 'comprehensive', 'deep_dive', or 'expert'",
@@ -236,25 +276,40 @@ async def review_plan(
             "(e.g., 'timeline', 'resources', 'risks', 'budget')"
         ),
     ] = None,
-    model: Annotated[str, "OpenAI model to use"] = "gpt-4",
-    max_tokens: Annotated[int, "Maximum tokens for response"] = 2000,
+    model: Annotated[
+        Optional[str], "OpenAI model to use (optional if set in headers)"
+    ] = None,
+    max_tokens: Annotated[
+        Optional[int], "Maximum tokens for response (optional if set in headers)"
+    ] = None,
 ) -> Dict[str, Any]:
     """
     Review a plan file and provide feedback based on the specified review level.
 
     Args:
         plan_content: The content of the plan file to review
-        api_key: OpenAI API key for authentication
         review_level: Level of review depth (quick, standard, comprehensive, deep_dive, expert)
         context: Optional context information about the project, team, or constraints
         plan_id: Optional identifier for the plan
         focus_areas: Optional list of specific areas to focus the review on
-        model: OpenAI model to use (default: gpt-4)
-        max_tokens: Maximum tokens for response (default: 2000)
+        model: OpenAI model to use (optional if set in headers, default: gpt-4)
+        max_tokens: Maximum tokens for response (optional if set in headers, default: 2000)
 
     Returns:
         Dictionary containing review results and feedback
     """
+    # Get configuration from headers
+    header_config = get_config_from_headers()
+
+    # Use parameters if provided, otherwise fall back to headers
+    final_api_key = header_config.get("api_key")
+    final_model = model or header_config.get("model", "gpt-4")
+    final_max_tokens = max_tokens or header_config.get("max_tokens", 2000)
+
+    # Validate API key is available
+    if not final_api_key:
+        raise ValueError("API key must be provided in X-OpenAI-API-Key header")
+
     # Log incoming MCP call
     log_mcp_call(
         "review_plan",
@@ -262,23 +317,15 @@ async def review_plan(
         plan_content_preview=plan_content[:200]
         if len(plan_content) > 200
         else plan_content,
-        api_key=api_key,
         review_level=review_level,
         context=context[:100] if context and len(context) > 100 else context,
         plan_id=plan_id,
         focus_areas=focus_areas,
-        model=model,
-        max_tokens=max_tokens,
+        model=final_model,
+        model_source="parameter" if model else "header",
+        max_tokens=final_max_tokens,
+        max_tokens_source="parameter" if max_tokens else "header",
     )
-
-    # Create OpenAI client with provided API key
-    logger.debug(
-        "Creating OpenAI client for plan review",
-        api_key_provided=bool(api_key),
-        api_key_length=len(api_key) if api_key else 0,
-        api_key_masked=mask_api_key(api_key),
-    )
-    client = openai.OpenAI(api_key=api_key)
 
     # Generate plan ID if not provided
     if not plan_id:
@@ -530,13 +577,16 @@ async def review_plan(
     messages = [{"role": "user", "content": prompt}]
 
     try:
+        # Create OpenAI client with API key from headers
+        client = openai.OpenAI(api_key=final_api_key)
+
         # Log OpenAI request
-        log_openai_request(model, messages, max_tokens, api_key)
+        log_openai_request(final_model, messages, final_max_tokens, final_api_key)
 
         response = client.chat.completions.create(
-            model=model,
+            model=final_model,
             messages=messages,  # type: ignore[arg-type]
-            max_tokens=max_tokens,
+            max_tokens=final_max_tokens,
             temperature=0.3,
         )
 
@@ -614,8 +664,8 @@ async def review_plan(
             error=str(e),
             error_type=type(e).__name__,
             plan_id=plan_id,
-            api_key_provided=bool(api_key),
-            api_key_length=len(api_key) if api_key else 0,
+            api_key_provided=bool(final_api_key),
+            api_key_length=len(final_api_key) if final_api_key else 0,
         )
         raise
 
