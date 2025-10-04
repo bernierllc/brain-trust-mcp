@@ -18,6 +18,8 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "structlog>=23.0.0",
     "openai>=1.0.0",
+    "prometheus-client>=0.20.0",
+    "psycopg[binary]>=3.2.3",
 ]
 
 [project.optional-dependencies]
@@ -45,5 +47,5 @@ warn_unused_configs = true
 disallow_untyped_defs = true
 
 [[tool.mypy.overrides]]
-module = ["openai", "structlog", "fastmcp"]
+module = ["openai", "structlog", "fastmcp", "prometheus_client", "psycopg"]
 ignore_missing_imports = true
