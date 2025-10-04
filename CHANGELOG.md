@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.0] - 2025-10-04
+
+### Changed
+
+- **BREAKING**: Removed `api_key` parameter from `phone_a_friend` and `review_plan` tools
+- API keys must now be provided via `X-OpenAI-API-Key` HTTP header in MCP requests
+- Added `get_config_from_headers()` function to extract configuration from HTTP headers
+- `model` and `max_tokens` parameters are now optional and can be provided via headers or parameters
+- Updated all tests to work without `api_key` parameter
+- Updated documentation to reflect header-based API key configuration
+
+### Added
+
+- Header-based configuration support for API key, model, and max_tokens
+- Configuration can be set in MCP client's header configuration
+- Parameters can override header values when provided
+
+### Security
+
+- **Improved**: API keys passed securely via HTTP headers on each request
+- No need to store API keys in environment variables or server configuration
+- Each MCP client can use different API keys via header configuration
+
 ## [0.1.1] - 2025-10-04
 
 ### Changed
@@ -52,5 +77,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependabot configuration for pip and GitHub Actions
 - Smoke test script (`scripts/smoke.sh`) for health endpoint validation
 
+[0.2.0]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.2.0
 [0.1.1]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.1.1
 [0.1.0]: https://github.com/bernierllc/brain-trust-mcp/releases/tag/v0.1.0

@@ -192,8 +192,8 @@ Go to `Cursor Settings` -> `MCP` -> `Add new MCP Server`. Name it "brain-trust",
 
 **How it works:**
 
-- The `OPENAI_API_KEY` from the MCP client configuration is automatically passed to each tool call
-- The server receives the API key with each request and uses it to authenticate with OpenAI
+- The `OPENAI_API_KEY` from the MCP client configuration is set as an environment variable for the server
+- The server reads the API key from the environment and uses it to authenticate with OpenAI
 - Optional: You can override the model and max_tokens per tool call
 
 **Important**: Make sure Docker is running and the server is started before using in Cursor!

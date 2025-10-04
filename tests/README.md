@@ -105,10 +105,10 @@ Tests that don't require external API calls:
 
 Shared fixtures are defined in `conftest.py`:
 
-- `load_env` - Loads environment variables from `.env`
-- `api_key` - Provides OpenAI API key (skips test if not available)
+- `load_env` - Loads environment variables from `.env` (autouse, session-scoped)
+- `api_key` - Provides OpenAI API key and skips tests if not available (currently not used as the server reads the API key from environment)
 - `test_environment` - Sets up test environment variables
-- `sample_plan` - Provides sample plan content for review tests
+- `sample_plan` - Provides sample plan content for review tests (defined in test classes)
 
 ## Skipping Tests
 
