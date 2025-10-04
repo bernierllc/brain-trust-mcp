@@ -7,7 +7,7 @@ function Footer() {
       <div className="footer-content">
         <div className="footer-top">
           <div className="footer-section">
-            <h3 className="footer-title">brain-trust</h3>
+            <h3 className="footer-title">Ask MCP</h3>
             <p className="footer-text">
               Give your IDE Agent a brain trust to lean on for questions and plan reviews.
             </p>
