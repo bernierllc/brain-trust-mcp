@@ -59,7 +59,7 @@ def mask_api_key(api_key: str) -> str:
 
 
 def log_openai_request(
-    model: str, messages: List[Dict[str, str]], max_tokens: int, api_key: str
+    model: str, messages: List[Dict[str, Any]], max_tokens: int, api_key: str
 ) -> None:
     """Log OpenAI request details."""
     logger.debug(
@@ -188,7 +188,7 @@ async def phone_a_friend(
 
         response = client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             max_tokens=max_tokens,
             temperature=0.3,
         )
@@ -535,7 +535,7 @@ async def review_plan(
 
         response = client.chat.completions.create(
             model=model,
-            messages=messages,
+            messages=messages,  # type: ignore[arg-type]
             max_tokens=max_tokens,
             temperature=0.3,
         )
