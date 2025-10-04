@@ -9,6 +9,9 @@ services:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TRACK_METRICS_DB=${TRACK_METRICS_DB:-false}
+      - DATABASE_URL=${DATABASE_URL:-}
+      - SUPABASE_DB_URL=${SUPABASE_DB_URL:-}
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
