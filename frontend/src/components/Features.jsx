@@ -37,7 +37,7 @@ function Features() {
 
   return (
     <div className="features-container">
-      <h2 className="features-title">Three Simple Tools</h2>
+      <h2 className="features-title">3 Simple Tools</h2>
 
       <div className="features-grid">
         {features.map((feature, index) => (

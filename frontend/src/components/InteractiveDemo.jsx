@@ -78,9 +78,9 @@ function InteractiveDemo() {
 
   return (
     <div className="demo-container">
-      <h2 className="demo-title">Interactive Demo</h2>
+      <h2 className="demo-title">Try It Now</h2>
       <p className="demo-subtitle">
-        Try brain-trust right now without any installation
+        Test Ask MCP instantly in your browser
       </p>
 
       <div className="demo-tabs">

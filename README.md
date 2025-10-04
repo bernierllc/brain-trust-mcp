@@ -1,15 +1,10 @@
-# brain-trust - AI-Powered Q&A and Plan Review MCP Server
+# Ask MCP - Hosted OpenAI MCP Server
 
-[![Version](https://img.shields.io/badge/version-0.1.2-blue.svg)](https://github.com/bernierllc/brain-trust-mcp/releases)
-[![Tests](https://img.shields.io/badge/tests-18%20passed-success.svg)](./tests)
-[![Coverage](https://img.shields.io/badge/coverage-92%25-brightgreen.svg)](./tests)
-[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://python.org)
+🧠 **Connect your IDE to OpenAI for intelligent question answering and structured plan reviews.**
 
-🧠 **Your trusted brain trust for getting AI help with questions and plan reviews.**
+A hosted FastMCP server with 3 simple tools that connect your IDE directly to OpenAI. No local installation needed.
 
-A simple, powerful FastMCP server with just 3 tools that connect Cursor to OpenAI for intelligent question answering and structured plan analysis using the Master Review Framework.
-
-**NEW**: 🌐 **[Interactive Homepage](http://localhost:8000)** - Try brain-trust in your browser with installation guides for 8+ IDEs!
+**🌐 [Visit ask-mcp.com](https://ask-mcp.com)** - Try it instantly in your browser with setup guides for 8+ IDEs!
 
 ---
 

@@ -10,9 +10,9 @@ function Installation() {
 
   return (
     <div className="install-container">
-      <h2 className="install-title">Installation</h2>
+      <h2 className="install-title">Get Started</h2>
       <p className="install-subtitle">
-        Choose your IDE or AI agent to get started with brain-trust in under 2 minutes
+        Choose your IDE or AI agent to connect to Ask MCP in under 2 minutes
       </p>
 
       <div className="platform-tabs">
@@ -60,10 +60,10 @@ function Installation() {
         ))}
 
         <div className="config-section">
-          <h3 className="config-title">Verify Installation</h3>
+          <h3 className="config-title">Verify Connection</h3>
           <p className="config-description">
             {config.verification ||
-             'Make sure the server is running and try calling one of the tools from your IDE.'}
+             'Try calling one of the tools from your IDE to verify the connection.'}
           </p>
         </div>
       </div>

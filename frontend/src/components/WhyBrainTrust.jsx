@@ -4,19 +4,19 @@ import './WhyBrainTrust.css'
 function WhyBrainTrust() {
   return (
     <div className="why-container">
-      <h2 className="why-title">Why brain-trust?</h2>
+      <h2 className="why-title">Why Ask MCP?</h2>
 
       <div className="benefit-grid">
         <div className="benefit-card">
           <h3 className="benefit-title">Simple</h3>
           <div className="benefit-items">
             <div className="benefit-item">
-              <strong>Only 3 tools</strong>
+              <strong>3 simple tools</strong>
               <p>No complex setup or overwhelming options. Just three focused tools that solve real problems.</p>
             </div>
             <div className="benefit-item">
-              <strong>Clear documentation</strong>
-              <p>Comprehensive guides and examples to get you started in minutes.</p>
+              <strong>No local server needed</strong>
+              <p>Connect directly to our hosted service. No Docker, no installation, no maintenance.</p>
             </div>
             <div className="benefit-item">
               <strong>Easy integration</strong>
@@ -68,8 +68,8 @@ function WhyBrainTrust() {
           <div className="stat-label">Simple Tools</div>
         </div>
         <div className="stat-card">
-          <div className="stat-number">92%</div>
-          <div className="stat-label">Test Coverage</div>
+          <div className="stat-number">0</div>
+          <div className="stat-label">Installation Required</div>
         </div>
         <div className="stat-card">
           <div className="stat-number">5</div>
@@ -77,7 +77,7 @@ function WhyBrainTrust() {
         </div>
         <div className="stat-card">
           <div className="stat-number">8+</div>
-          <div className="stat-label">IDE Support</div>
+          <div className="stat-label">IDEs Supported</div>
         </div>
       </div>
     </div>
