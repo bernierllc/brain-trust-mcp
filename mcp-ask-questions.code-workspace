@@ -80,6 +80,15 @@
 		"terminal.integrated.env.osx": {
 			"PYTHONPATH": "${workspaceFolder}"
 		},
+		"terminal.integrated.profiles.osx": {
+			"bash": {
+				"path": "/opt/homebrew/bin/bash",
+				"args": ["-c", "source ${workspaceFolder}/venv/bin/activate 2>/dev/null || echo 'Virtual environment not found. Run: python3 -m venv venv'; exec bash"]
+			}
+		},
+		"terminal.integrated.automationProfile.osx": {
+			"path": "/opt/homebrew/bin/bash"
+		},
 
 		// Docker Configuration
 		"docker.showStartPage": false,

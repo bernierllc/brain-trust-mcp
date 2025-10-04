@@ -4,6 +4,8 @@ Contextual Q&A MCP Server with OpenAI integration and plan review capabilities.
 """
 
 import json
+import logging
+import os
 from datetime import datetime
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional
@@ -12,6 +14,10 @@ import openai
 import structlog
 from fastmcp import FastMCP
 from pydantic import BaseModel, Field
+
+# Get environment and log level from environment variables
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG" if ENVIRONMENT == "development" else "INFO")
 
 # Configure structured logging
 structlog.configure(
@@ -32,12 +38,76 @@ structlog.configure(
     cache_logger_on_first_use=True,
 )
 
+# Set the log level
+logging.basicConfig(level=LOG_LEVEL)
 logger = structlog.get_logger()
 
 # Initialize FastMCP server
 mcp = FastMCP("brain-trust")
 
 # Note: OpenAI client is created per-request with API key from tool parameters
+
+
+# Helper functions for logging
+def mask_api_key(api_key: str) -> str:
+    """Mask API key for logging in production."""
+    if not api_key:
+        return "None"
+    if ENVIRONMENT == "production" or LOG_LEVEL != "DEBUG":
+        return f"{api_key[:8]}...{api_key[-4:]}" if len(api_key) > 12 else "***"
+    return api_key
+
+
+def log_openai_request(
+    model: str, messages: List[Dict[str, Any]], max_tokens: int, api_key: str
+) -> None:
+    """Log OpenAI request details."""
+    logger.debug(
+        "OpenAI API Request",
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+        model=model,
+        messages=messages,
+        max_tokens=max_tokens,
+        api_key=mask_api_key(api_key),
+        api_key_length=len(api_key) if api_key else 0,
+        headers={
+            "Authorization": f"Bearer {mask_api_key(api_key)}",
+            "Content-Type": "application/json",
+        },
+    )
+
+
+def log_openai_response(response: Any) -> None:
+    """Log OpenAI response details."""
+    logger.debug(
+        "OpenAI API Response",
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+        response_id=getattr(response, "id", None),
+        model=getattr(response, "model", None),
+        usage=getattr(response, "usage", None),
+        choices_count=len(response.choices) if hasattr(response, "choices") else 0,
+        response_headers={
+            "content-type": "application/json",
+        },
+    )
+
+
+def log_mcp_call(tool_name: str, **kwargs: Any) -> None:
+    """Log incoming MCP tool call."""
+    # Mask sensitive parameters
+    safe_kwargs = kwargs.copy()
+    if "api_key" in safe_kwargs:
+        safe_kwargs["api_key"] = mask_api_key(safe_kwargs["api_key"])
+
+    logger.debug(
+        "MCP Tool Call Received",
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+        tool_name=tool_name,
+        parameters=safe_kwargs,
+    )
 
 
 # Data Models
@@ -47,6 +117,7 @@ class ReviewLevel(str, Enum):
     QUICK = "quick"  # Basic structure and completeness
     STANDARD = "standard"  # Detailed analysis with suggestions
     COMPREHENSIVE = "comprehensive"  # Deep analysis with alternatives
+    DEEP_DIVE = "deep_dive"  # Technical analysis with implementation considerations
     EXPERT = "expert"  # Professional-level review with best practices
 
 
@@ -80,7 +151,23 @@ async def phone_a_friend(
     max_tokens: Annotated[int, "Maximum tokens for response"] = 1000,
 ) -> str:
     """Phone a friend (OpenAI) to get help with a question."""
+    # Log incoming MCP call
+    log_mcp_call(
+        "phone_a_friend",
+        question=question[:100] if len(question) > 100 else question,
+        api_key=api_key,
+        context=context[:100] if context and len(context) > 100 else context,
+        model=model,
+        max_tokens=max_tokens,
+    )
+
     # Create OpenAI client with provided API key
+    logger.debug(
+        "Creating OpenAI client",
+        api_key_provided=bool(api_key),
+        api_key_length=len(api_key) if api_key else 0,
+        api_key_masked=mask_api_key(api_key),
+    )
     client = openai.OpenAI(api_key=api_key)
 
     # Build prompt with optional context
@@ -93,13 +180,21 @@ async def phone_a_friend(
     else:
         prompt = f"Question: {question}\n\nPlease provide a comprehensive answer."
 
+    messages = [{"role": "user", "content": prompt}]
+
     try:
+        # Log OpenAI request
+        log_openai_request(model, messages, max_tokens, api_key)
+
         response = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,  # type: ignore[arg-type]
             max_tokens=max_tokens,
             temperature=0.3,
         )
+
+        # Log OpenAI response
+        log_openai_response(response)
 
         answer = response.choices[0].message.content
         if not answer:
@@ -110,7 +205,13 @@ async def phone_a_friend(
         return result
 
     except Exception as e:
-        logger.error("Failed to phone a friend", error=str(e))
+        logger.error(
+            "Failed to phone a friend",
+            error=str(e),
+            error_type=type(e).__name__,
+            api_key_provided=bool(api_key),
+            api_key_length=len(api_key) if api_key else 0,
+        )
         raise
 
 
@@ -121,7 +222,7 @@ async def review_plan(
     api_key: Annotated[str, "OpenAI API key for authentication"],
     review_level: Annotated[
         ReviewLevel,
-        "Level of review depth: 'quick', 'standard', 'comprehensive', or 'expert'",
+        "Level of review depth: 'quick', 'standard', 'comprehensive', 'deep_dive', or 'expert'",
     ] = ReviewLevel.STANDARD,
     context: Annotated[
         Optional[str],
@@ -144,7 +245,7 @@ async def review_plan(
     Args:
         plan_content: The content of the plan file to review
         api_key: OpenAI API key for authentication
-        review_level: Level of review depth (quick, standard, comprehensive, expert)
+        review_level: Level of review depth (quick, standard, comprehensive, deep_dive, expert)
         context: Optional context information about the project, team, or constraints
         plan_id: Optional identifier for the plan
         focus_areas: Optional list of specific areas to focus the review on
@@ -154,7 +255,29 @@ async def review_plan(
     Returns:
         Dictionary containing review results and feedback
     """
+    # Log incoming MCP call
+    log_mcp_call(
+        "review_plan",
+        plan_content_length=len(plan_content),
+        plan_content_preview=plan_content[:200]
+        if len(plan_content) > 200
+        else plan_content,
+        api_key=api_key,
+        review_level=review_level,
+        context=context[:100] if context and len(context) > 100 else context,
+        plan_id=plan_id,
+        focus_areas=focus_areas,
+        model=model,
+        max_tokens=max_tokens,
+    )
+
     # Create OpenAI client with provided API key
+    logger.debug(
+        "Creating OpenAI client for plan review",
+        api_key_provided=bool(api_key),
+        api_key_length=len(api_key) if api_key else 0,
+        api_key_masked=mask_api_key(api_key),
+    )
     client = openai.OpenAI(api_key=api_key)
 
     # Generate plan ID if not provided
@@ -162,48 +285,216 @@ async def review_plan(
         plan_id = f"plan_{int(datetime.now().timestamp())}"
 
     # Create review prompt based on level
+    # All reviews follow the Master Review Framework with varying depth
     review_prompts = {
         ReviewLevel.QUICK: """
-        Provide a quick review of this plan focusing on:
-        - Basic structure and organization
-        - Completeness of key sections
-        - Obvious gaps or issues
+        Provide a quick review of this plan using the following framework:
 
-        Keep feedback concise and actionable.
+        STRUCTURE & ORGANIZATION:
+        - Is the plan logically structured and easy to follow?
+
+        COMPLETENESS:
+        - Are key sections present (objectives, scope, timeline)?
+
+        CLARITY:
+        - Any obvious ambiguities or "must-fix" clarity issues?
+
+        ASSUMPTIONS & RISKS:
+        - Any glaring unstated assumptions or obvious risks?
+
+        Keep feedback concise, actionable, and in checklist form if possible.
+        Provide 1-2 key improvement suggestions.
         """,
         ReviewLevel.STANDARD: """
-        Provide a standard review of this plan including:
-        - Overall structure and flow
-        - Completeness and detail level
-        - Clarity and readability
-        - Potential improvements
-        - Risk assessment
+        Provide a standard review of this plan using the following framework:
 
-        Provide specific suggestions for improvement.
+        STRUCTURE & ORGANIZATION:
+        - Is the plan logically structured and easy to follow?
+
+        COMPLETENESS:
+        - Are all key sections present (objectives, scope, resources, risks, timeline, success criteria)?
+        - Is there appropriate level of detail for each section?
+
+        CLARITY:
+        - Is the language unambiguous, readable, and accessible to stakeholders?
+
+        ASSUMPTIONS & DEPENDENCIES:
+        - Are hidden assumptions, constraints, or external dependencies called out?
+
+        RISKS:
+        - What risks or failure modes are unaddressed?
+
+        FEASIBILITY:
+        - Are timeline and resource estimates realistic?
+
+        Provide specific suggestions and 2-3 clarifying questions the plan should answer.
         """,
         ReviewLevel.COMPREHENSIVE: """
-        Provide a comprehensive review of this plan including:
-        - Detailed analysis of each section
-        - Strategic alignment and feasibility
-        - Resource requirements and timeline analysis
-        - Risk identification and mitigation strategies
-        - Alternative approaches and recommendations
-        - Implementation considerations
+        Provide a comprehensive review of this plan using the following framework:
 
-        Provide detailed feedback with specific examples and alternatives.
+        STRUCTURE & ORGANIZATION:
+        - Is the plan logically structured and easy to follow?
+        - Does it flow naturally from problem → solution → implementation?
+
+        COMPLETENESS:
+        - Are all key sections present and thoroughly developed (objectives, scope, resources, risks, timeline, success criteria)?
+        - Is the level of detail appropriate for each section?
+
+        CLARITY:
+        - Is the language unambiguous, readable, and accessible to all stakeholders?
+        - Are technical terms and concepts clearly explained?
+
+        ASSUMPTIONS & DEPENDENCIES:
+        - Are hidden assumptions, constraints, or external dependencies explicitly called out?
+        - What implicit assumptions need to be validated?
+
+        RISKS:
+        - What risks, failure modes, or edge cases are unaddressed?
+        - Are mitigation strategies defined for key risks?
+
+        FEASIBILITY:
+        - Are timeline and resource estimates realistic?
+        - Is the plan testable and measurable?
+        - Can success be validated objectively?
+
+        ALTERNATIVES:
+        - Have trade-offs and alternative approaches been considered?
+        - Are design decisions justified?
+
+        VALIDATION:
+        - Does the plan define success criteria, KPIs, or metrics?
+        - How will progress be tracked and measured?
+
+        STAKEHOLDERS:
+        - Are roles, responsibilities, and stakeholder impacts clear?
+
+        LONG-TERM SUSTAINABILITY:
+        - Does the plan account for scalability, maintainability, and adaptability?
+
+        Provide detailed feedback with examples, alternatives, and 3-5 clarifying questions that expose potential blind spots.
+        """,
+        ReviewLevel.DEEP_DIVE: """
+        Provide a deep-dive technical review of this plan using the following framework:
+
+        STRUCTURE & ORGANIZATION:
+        - Evaluate logical flow, section coherence, and information architecture
+        - Assess whether structure supports understanding and execution
+
+        COMPLETENESS:
+        - Section-by-section completeness audit (objectives, scope, resources, risks, timeline, success criteria, rollout plan)
+        - Identify missing technical details, specifications, or requirements
+
+        CLARITY:
+        - Evaluate technical precision and unambiguous language
+        - Assess readability for both technical and non-technical stakeholders
+
+        ASSUMPTIONS & DEPENDENCIES:
+        - Identify ALL stated and unstated assumptions
+        - Map out dependency chains and potential bottlenecks
+        - Validate technical feasibility of each assumption
+
+        RISKS:
+        - Comprehensive risk analysis: technical, operational, security, performance
+        - Failure mode analysis (FMEA-style): what could go wrong and when?
+        - Edge cases, race conditions, and boundary conditions
+        - Mitigation and rollback strategies for each major risk
+
+        FEASIBILITY:
+        - Detailed timeline realism check with critical path analysis
+        - Resource allocation validation (team capacity, skills, budget)
+        - Technical feasibility of proposed solutions
+        - Testing strategy and validation approach
+
+        ALTERNATIVES:
+        - Compare against alternative technical approaches
+        - Evaluate trade-offs (performance vs complexity, cost vs speed, etc.)
+        - Justify architectural and design decisions
+
+        VALIDATION:
+        - Define measurable success criteria and KPIs
+        - Specify testing, monitoring, and observability requirements
+        - Outline validation checkpoints throughout implementation
+
+        STAKEHOLDERS:
+        - Map stakeholder roles, responsibilities, and approval gates
+        - Identify communication touchpoints and escalation paths
+
+        LONG-TERM SUSTAINABILITY:
+        - Scalability analysis: how will this perform at 10x, 100x scale?
+        - Maintainability: code quality, documentation, knowledge transfer
+        - Adaptability: how easily can this evolve with changing requirements?
+        - Operational considerations: deployment, monitoring, incident response
+
+        Provide rigorous, technically detailed feedback with specific examples, actionable improvements, and 4-6 probing questions.
         """,
         ReviewLevel.EXPERT: """
-        Provide an expert-level review of this plan including:
-        - Professional best practices assessment
-        - Industry standards compliance
-        - Advanced strategic analysis
-        - Detailed risk and opportunity analysis
-        - Performance metrics and KPIs
-        - Stakeholder impact analysis
-        - Long-term sustainability considerations
-        - Competitive analysis and positioning
+        Provide an expert-level review of this plan using the Master Review Framework with professional rigor:
 
-        Provide expert-level insights and recommendations with industry context.
+        STRUCTURE & ORGANIZATION:
+        - Evaluate against industry-standard plan structures (PRDs, RFCs, technical specifications)
+        - Assess information architecture and accessibility for diverse audiences
+
+        COMPLETENESS:
+        - Comprehensive audit of all sections (objectives, scope, resources, risks, timeline, success criteria, rollout, communication plan)
+        - Evaluate against professional planning standards and best practices
+        - Identify gaps that would concern executive stakeholders or auditors
+
+        CLARITY:
+        - Assess precision, unambiguity, and professional communication standards
+        - Evaluate for multi-stakeholder accessibility (technical, business, executive)
+        - Check for regulatory or compliance language requirements
+
+        ASSUMPTIONS & DEPENDENCIES:
+        - Exhaustive mapping of assumptions with validation requirements
+        - Dependency analysis including external systems, teams, and third parties
+        - Constraint analysis (technical, business, legal, compliance)
+        - Market or competitive landscape assumptions
+
+        RISKS:
+        - Enterprise-level risk assessment (technical, operational, business, legal, reputational)
+        - Comprehensive failure mode analysis with probability and impact assessment
+        - Security, privacy, and compliance risks
+        - Business continuity and disaster recovery considerations
+        - Risk mitigation, transfer, acceptance strategies
+
+        FEASIBILITY:
+        - Multi-dimensional feasibility analysis: technical, operational, financial, organizational
+        - Realistic timeline assessment with uncertainty ranges
+        - Resource allocation optimization and capacity planning
+        - Financial modeling and ROI analysis where applicable
+        - Testability, measurability, and validation strategy
+
+        ALTERNATIVES:
+        - Comprehensive alternatives analysis with decision matrices
+        - Trade-off evaluation across multiple dimensions (cost, time, quality, risk)
+        - Competitive analysis and industry benchmarking
+        - Build vs buy vs partner considerations
+
+        VALIDATION:
+        - Define SMART success criteria and KPIs aligned with business objectives
+        - Comprehensive testing strategy (unit, integration, system, acceptance)
+        - Monitoring, observability, and alerting requirements
+        - Metrics dashboard and reporting cadence
+        - Go/no-go decision criteria at each milestone
+
+        STAKEHOLDERS:
+        - Complete stakeholder mapping with RACI matrix
+        - Communication plan with appropriate cadence and channels
+        - Change management and stakeholder buy-in strategy
+        - Executive reporting and governance structure
+
+        LONG-TERM SUSTAINABILITY:
+        - Scalability with specific load projections and capacity planning
+        - Maintainability with documentation, knowledge transfer, and support plans
+        - Adaptability and extensibility for future requirements
+        - Total cost of ownership (TCO) analysis
+        - Technical debt management strategy
+        - Operational excellence: SLAs, SLOs, error budgets
+        - Team sustainability: on-call rotation, burnout prevention
+
+        Provide expert insights with industry context, citing best practices and standards where relevant.
+        Suggest measurable improvements with business impact.
+        Provide 5-7 strategic questions the leadership team should address before execution.
         """,
     }
 
@@ -236,13 +527,21 @@ async def review_plan(
     }}
     """
 
+    messages = [{"role": "user", "content": prompt}]
+
     try:
+        # Log OpenAI request
+        log_openai_request(model, messages, max_tokens, api_key)
+
         response = client.chat.completions.create(
             model=model,
-            messages=[{"role": "user", "content": prompt}],
+            messages=messages,  # type: ignore[arg-type]
             max_tokens=max_tokens,
             temperature=0.3,
         )
+
+        # Log OpenAI response
+        log_openai_response(response)
 
         # Parse JSON response
         review_content = response.choices[0].message.content
@@ -310,7 +609,14 @@ async def review_plan(
         }
 
     except Exception as e:
-        logger.error("Failed to review plan", error=str(e), plan_id=plan_id)
+        logger.error(
+            "Failed to review plan",
+            error=str(e),
+            error_type=type(e).__name__,
+            plan_id=plan_id,
+            api_key_provided=bool(api_key),
+            api_key_length=len(api_key) if api_key else 0,
+        )
         raise
 
 
@@ -326,8 +632,22 @@ async def health_check() -> Dict[str, Any]:
 
 
 # Server startup logging
-logger.info("MCP server initialized successfully")
+logger.info(
+    "MCP server initialized successfully",
+    environment=ENVIRONMENT,
+    log_level=LOG_LEVEL,
+    debug_logging_enabled=(LOG_LEVEL == "DEBUG"),
+    sensitive_data_logging=(ENVIRONMENT == "development" and LOG_LEVEL == "DEBUG"),
+)
 
 if __name__ == "__main__":
     # Run the server
+    logger.info(
+        "Starting MCP server",
+        transport="http",
+        host="0.0.0.0",
+        port=8000,
+        environment=ENVIRONMENT,
+        log_level=LOG_LEVEL,
+    )
     mcp.run(transport="http", host="0.0.0.0", port=8000)
