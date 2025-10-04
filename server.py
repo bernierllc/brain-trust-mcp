@@ -24,7 +24,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -43,14 +43,16 @@ mcp = FastMCP("brain-trust")
 # Data Models
 class ReviewLevel(str, Enum):
     """Review levels for plan analysis."""
-    QUICK = "quick"           # Basic structure and completeness
-    STANDARD = "standard"     # Detailed analysis with suggestions
+
+    QUICK = "quick"  # Basic structure and completeness
+    STANDARD = "standard"  # Detailed analysis with suggestions
     COMPREHENSIVE = "comprehensive"  # Deep analysis with alternatives
-    EXPERT = "expert"         # Professional-level review with best practices
+    EXPERT = "expert"  # Professional-level review with best practices
 
 
 class PlanReview(BaseModel):
     """Plan review result."""
+
     plan_id: str
     review_level: ReviewLevel
     overall_score: float
@@ -70,9 +72,12 @@ plan_reviews: Dict[str, PlanReview] = {}
 async def phone_a_friend(
     question: Annotated[str, "The question to ask OpenAI"],
     api_key: Annotated[str, "OpenAI API key for authentication"],
-    context: Annotated[Optional[str], "Optional context information to provide background for the question"] = None,
+    context: Annotated[
+        Optional[str],
+        "Optional context information to provide background for the question",
+    ] = None,
     model: Annotated[str, "OpenAI model to use"] = "gpt-4",
-    max_tokens: Annotated[int, "Maximum tokens for response"] = 1000
+    max_tokens: Annotated[int, "Maximum tokens for response"] = 1000,
 ) -> str:
     """Phone a friend (OpenAI) to get help with a question."""
     # Create OpenAI client with provided API key
@@ -80,7 +85,11 @@ async def phone_a_friend(
 
     # Build prompt with optional context
     if context:
-        prompt = f"Context: {context}\n\nQuestion: {question}\n\nPlease provide a comprehensive answer."
+        prompt = (
+            f"Context: {context}\n\n"
+            f"Question: {question}\n\n"
+            f"Please provide a comprehensive answer."
+        )
     else:
         prompt = f"Question: {question}\n\nPlease provide a comprehensive answer."
 
@@ -89,13 +98,16 @@ async def phone_a_friend(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            temperature=0.3
+            temperature=0.3,
         )
 
-        answer = response.choices[0].message.content.strip()
+        answer = response.choices[0].message.content
+        if not answer:
+            raise ValueError("Empty response from OpenAI")
 
         logger.info("Friend called successfully", question=question[:50])
-        return answer
+        result: str = answer.strip()
+        return result
 
     except Exception as e:
         logger.error("Failed to phone a friend", error=str(e))
@@ -107,12 +119,24 @@ async def phone_a_friend(
 async def review_plan(
     plan_content: Annotated[str, "The full content of the plan document to review"],
     api_key: Annotated[str, "OpenAI API key for authentication"],
-    review_level: Annotated[ReviewLevel, "Level of review depth: 'quick', 'standard', 'comprehensive', or 'expert'"] = ReviewLevel.STANDARD,
-    context: Annotated[Optional[str], "Optional context information about the project, team, or constraints"] = None,
+    review_level: Annotated[
+        ReviewLevel,
+        "Level of review depth: 'quick', 'standard', 'comprehensive', or 'expert'",
+    ] = ReviewLevel.STANDARD,
+    context: Annotated[
+        Optional[str],
+        "Optional context information about the project, team, or constraints",
+    ] = None,
     plan_id: Annotated[Optional[str], "Optional identifier for the plan"] = None,
-    focus_areas: Annotated[Optional[List[str]], "Specific areas to focus on (e.g., 'timeline', 'resources', 'risks', 'budget', 'stakeholders')"] = None,
+    focus_areas: Annotated[
+        Optional[List[str]],
+        (
+            "Specific areas to focus on "
+            "(e.g., 'timeline', 'resources', 'risks', 'budget')"
+        ),
+    ] = None,
     model: Annotated[str, "OpenAI model to use"] = "gpt-4",
-    max_tokens: Annotated[int, "Maximum tokens for response"] = 2000
+    max_tokens: Annotated[int, "Maximum tokens for response"] = 2000,
 ) -> Dict[str, Any]:
     """
     Review a plan file and provide feedback based on the specified review level.
@@ -180,14 +204,15 @@ async def review_plan(
         - Competitive analysis and positioning
 
         Provide expert-level insights and recommendations with industry context.
-        """
+        """,
     }
 
     base_prompt = review_prompts[review_level]
 
     # Add focus areas if specified
     if focus_areas:
-        focus_text = f"\n\nFocus the review specifically on these areas: {', '.join(focus_areas)}"
+        areas = ", ".join(focus_areas)
+        focus_text = f"\n\nFocus the review specifically on these areas: {areas}"
         base_prompt += focus_text
 
     # Add context if provided
@@ -216,7 +241,7 @@ async def review_plan(
             model=model,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            temperature=0.3
+            temperature=0.3,
         )
 
         # Parse JSON response
@@ -225,8 +250,8 @@ async def review_plan(
         # Try to extract JSON from the response
         try:
             # Look for JSON in the response
-            start_idx = review_text.find('{')
-            end_idx = review_text.rfind('}') + 1
+            start_idx = review_text.find("{")
+            end_idx = review_text.rfind("}") + 1
             if start_idx != -1 and end_idx != 0:
                 json_text = review_text[start_idx:end_idx]
                 review_data = json.loads(json_text)
@@ -237,7 +262,7 @@ async def review_plan(
                     "strengths": ["Plan structure is present"],
                     "weaknesses": ["Unable to parse detailed review"],
                     "suggestions": ["Review the plan manually"],
-                    "detailed_feedback": review_text
+                    "detailed_feedback": review_text,
                 }
         except json.JSONDecodeError:
             # Fallback if JSON parsing fails
@@ -246,7 +271,7 @@ async def review_plan(
                 "strengths": ["Plan structure is present"],
                 "weaknesses": ["Unable to parse detailed review"],
                 "suggestions": ["Review the plan manually"],
-                "detailed_feedback": review_text
+                "detailed_feedback": review_text,
             }
 
         # Create plan review object
@@ -257,13 +282,18 @@ async def review_plan(
             strengths=review_data.get("strengths", []),
             weaknesses=review_data.get("weaknesses", []),
             suggestions=review_data.get("suggestions", []),
-            detailed_feedback=review_data.get("detailed_feedback", review_text)
+            detailed_feedback=review_data.get("detailed_feedback", review_text),
         )
 
         # Store the review
         plan_reviews[plan_id] = plan_review
 
-        logger.info("Plan reviewed", plan_id=plan_id, review_level=review_level, score=plan_review.overall_score)
+        logger.info(
+            "Plan reviewed",
+            plan_id=plan_id,
+            review_level=review_level,
+            score=plan_review.overall_score,
+        )
 
         return {
             "plan_id": plan_id,
@@ -273,7 +303,7 @@ async def review_plan(
             "weaknesses": plan_review.weaknesses,
             "suggestions": plan_review.suggestions,
             "detailed_feedback": plan_review.detailed_feedback,
-            "reviewed_at": plan_review.reviewed_at.isoformat()
+            "reviewed_at": plan_review.reviewed_at.isoformat(),
         }
 
     except Exception as e:
@@ -288,8 +318,9 @@ async def health_check() -> Dict[str, Any]:
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
-        "plan_reviews_count": len(plan_reviews)
+        "plan_reviews_count": len(plan_reviews),
     }
+
 
 # Server startup logging
 logger.info("MCP server initialized successfully")
