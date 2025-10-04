@@ -29,7 +29,7 @@ function WhyBrainTrust() {
           <h3 className="benefit-title">Powerful</h3>
           <div className="benefit-items">
             <div className="benefit-item">
-              <strong>Full GPT-4 access</strong>
+              <strong>Full OpenAI Model access</strong>
               <p>Direct connection to OpenAI for intelligent responses.</p>
             </div>
             <div className="benefit-item">
