@@ -5,7 +5,9 @@ import './Installation.css'
 
 function Installation() {
   const [selectedPlatform, setSelectedPlatform] = useState('cursor')
-  const platforms = Object.keys(installConfigs)
+  const platforms = Object.keys(installConfigs).sort((a, b) =>
+    installConfigs[a].name.localeCompare(installConfigs[b].name)
+  )
   const config = installConfigs[selectedPlatform]
 
   return (
