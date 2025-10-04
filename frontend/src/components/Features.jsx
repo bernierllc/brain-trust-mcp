@@ -8,7 +8,7 @@ function Features() {
       title: 'phone_a_friend',
       description: 'Ask OpenAI any question, with optional context for better answers.',
       items: [
-        'Direct access to GPT-4',
+        'Direct access to your favorite GPT model',
         'Context-aware responses',
         'Configurable model & tokens',
       ],
