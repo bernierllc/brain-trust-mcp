@@ -13,6 +13,7 @@ This release significantly enhances the plan review capabilities with a structur
 All review levels now follow a **consistent 10-point evaluation framework** for comprehensive plan analysis:
 
 **Framework Dimensions:**
+
 - **Structure & Organization** - Logical flow and accessibility
 - **Completeness** - All required sections present and detailed
 - **Clarity** - Unambiguous language for all stakeholders
@@ -37,6 +38,7 @@ review_plan(
 ```
 
 **DEEP_DIVE includes:**
+
 - Section-by-section technical feasibility analysis
 - FMEA-style failure mode analysis (what could go wrong and when)
 - Comprehensive risk analysis: technical, operational, security, performance
@@ -47,6 +49,7 @@ review_plan(
 - 4-6 probing technical questions
 
 **Review Levels (Progressive Depth):**
+
 1. `quick` - Basic checklist (1-2 suggestions)
 2. `standard` - Standard analysis (2-3 questions)
 3. `comprehensive` - Detailed coverage (3-5 questions)
@@ -58,6 +61,7 @@ review_plan(
 Full request/response tracing for debugging API key passing:
 
 **Logged Information:**
+
 - ✅ **MCP Tool Calls** - All incoming parameters from client
 - ✅ **OpenAI Client Creation** - API key validation and length
 - ✅ **OpenAI API Requests** - Full headers including Authorization bearer token
@@ -67,25 +71,30 @@ Full request/response tracing for debugging API key passing:
 **Environment-Aware Logging:**
 
 **Development Mode (DEBUG):**
+
 ```bash
 ENVIRONMENT=development
 LOG_LEVEL=DEBUG
 ```
+
 - Full API keys visible in logs
 - Complete request/response details
 - All headers logged
 - Maximum debugging information
 
 **Production Mode (INFO+):**
+
 ```bash
 ENVIRONMENT=production
 LOG_LEVEL=INFO
 ```
+
 - API keys masked (first 8 + last 4 chars only)
 - Essential information only
 - Reduced sensitive data logging
 
 **Example Debug Log Output:**
+
 ```json
 {
   "event": "MCP Tool Call Received",
@@ -120,6 +129,7 @@ LOG_LEVEL=INFO
 Automated code quality checks on every commit:
 
 **Pre-commit Hook Runs:**
+
 - ✅ **black** - Code formatting
 - ✅ **isort** - Import sorting
 - ✅ **flake8** - Linting
@@ -131,20 +141,52 @@ Automated code quality checks on every commit:
 
 Commits are blocked if any check fails, ensuring code quality.
 
-### 5. Development Environment Improvements
+### 5. Comprehensive Pytest Test Suite
+
+Professional test suite with pytest framework:
+
+**Test Coverage:**
+- **18 total tests** with 92% code coverage
+- **8 unit tests** - Fast tests for logging and utilities (no API calls)
+- **10 integration tests** - Real OpenAI API calls to verify functionality
+
+**Test Organization:**
+- `conftest.py` - Shared fixtures and configuration
+- `test_tools.py` - Tests for all MCP tools (phone_a_friend, review_plan)
+- `test_logging.py` - Tests for logging system and health check
+- `tests/README.md` - Comprehensive documentation
+
+**Test Features:**
+- ✅ Async test support with pytest-asyncio
+- ✅ Automatic API key detection (skips if not available)
+- ✅ Environment-aware testing
+- ✅ Coverage reporting with pytest-cov
+- ✅ Type-safe with full annotations
+
+**What's Tested:**
+- All 3 MCP tools (phone_a_friend, review_plan, health_check)
+- All 5 review levels (quick, standard, comprehensive, deep_dive, expert)
+- API key masking in different environments
+- Real OpenAI API integration
+- Error handling and edge cases
+
+### 6. Development Environment Improvements
 
 **Auto-activate Python venv:**
+
 - VS Code/Cursor workspace automatically activates virtual environment on terminal open
 - No more manual `source venv/bin/activate`
 - Graceful error handling with helpful messages
 
 **Enhanced Docker Configuration:**
+
 ```yaml
 environment:
   - ENVIRONMENT=${ENVIRONMENT:-development}
   - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
   - OPENAI_API_KEY=${OPENAI_API_KEY}
 ```
+
 - Environment variables properly passed to container
 - Full debug logging available in containerized environment
 - Simplified configuration management
@@ -154,17 +196,20 @@ environment:
 ## 🔧 Technical Improvements
 
 ### Enhanced Type Safety
+
 - Added proper type hints for logging functions
 - Fixed mypy compatibility with OpenAI SDK types
 - Type-safe message handling throughout
 
 ### Logging Infrastructure
+
 - Structured logging with JSON output
 - Environment-based masking strategies
 - Helper functions for consistent log formatting
 - Comprehensive error context capture
 
 ### Code Quality
+
 - Pre-commit hooks enforce standards
 - Automated formatting and linting
 - Type checking on every commit
@@ -174,13 +219,13 @@ environment:
 
 ## 📋 Review Levels Comparison
 
-| Level | Depth | Questions | Use Case |
-|-------|-------|-----------|----------|
-| **quick** | Basic | 1-2 | Initial sanity check |
-| **standard** | Moderate | 2-3 | Regular review |
-| **comprehensive** | Detailed | 3-5 | Important projects |
-| **deep_dive** ⭐ NEW | Technical | 4-6 | Technical feasibility |
-| **expert** | Professional | 5-7 | Strategic decisions |
+| Level                | Depth        | Questions | Use Case              |
+| -------------------- | ------------ | --------- | --------------------- |
+| **quick**            | Basic        | 1-2       | Initial sanity check  |
+| **standard**         | Moderate     | 2-3       | Regular review        |
+| **comprehensive**    | Detailed     | 3-5       | Important projects    |
+| **deep_dive** ⭐ NEW | Technical    | 4-6       | Technical feasibility |
+| **expert**           | Professional | 5-7       | Strategic decisions   |
 
 ---
 
@@ -195,13 +240,22 @@ environment:
 ## 📚 Documentation
 
 ### New Documentation
+
 - **`docs/LOGGING.md`** - Complete logging system guide
   - Configuration instructions
   - Example log outputs
   - Troubleshooting guide for API key issues
   - Best practices for production use
 
+- **`tests/README.md`** - Comprehensive test documentation
+  - Running tests instructions
+  - Test structure and organization
+  - Coverage reporting
+  - Debugging tips
+  - Contributing guidelines
+
 ### Updated Documentation
+
 - **`env.example`** - Enhanced with logging configuration details
 - **Pre-commit hook** - Installation and usage documentation
 
@@ -210,6 +264,7 @@ environment:
 ## 🚀 Usage Examples
 
 ### Deep Dive Review
+
 ```python
 # Get technical-depth review with FMEA analysis
 review_plan(
@@ -221,6 +276,7 @@ review_plan(
 ```
 
 ### Debug Mode
+
 ```bash
 # Enable full debug logging
 export ENVIRONMENT=development
@@ -234,12 +290,29 @@ tail -f server.log
 ```
 
 ### Docker with Debug Logging
+
 ```bash
 # Run with full logging
 ENVIRONMENT=development LOG_LEVEL=DEBUG docker-compose up
 
 # Check logs
 docker-compose logs -f
+```
+
+### Run Test Suite
+
+```bash
+# Run all tests
+pytest tests/
+
+# Run with coverage report
+pytest --cov=server --cov-report=term-missing tests/
+
+# Run only unit tests (fast, no API calls)
+pytest tests/test_logging.py
+
+# Run only integration tests
+pytest tests/test_tools.py
 ```
 
 ---
@@ -310,6 +383,7 @@ The `.code-workspace` file now auto-activates the Python virtual environment on 
 No breaking changes. All existing code continues to work.
 
 **Optional Enhancements:**
+
 1. **Use new `deep_dive` review level** for technical plans
 2. **Enable debug logging** during development for troubleshooting
 3. **Verify pre-commit hooks** are working: `git commit` should run checks
@@ -323,6 +397,8 @@ No breaking changes. All existing code continues to work.
 - **Logging Points**: 5+ log events per request
 - **Code Quality**: 100% pre-commit enforcement
 - **Type Safety**: Full mypy compliance
+- **Test Coverage**: 92% with 18 tests (8 unit + 10 integration)
+- **Test Duration**: ~95 seconds for full suite
 
 ---
 
@@ -335,6 +411,8 @@ Thanks to all contributors who provided feedback on the review framework and log
 ## 📝 Commit History
 
 ```
+5b05665 test: migrate tests to pytest framework
+c928f10 feat(release): version 0.1.2 with enhanced review framework and comprehensive logging
 4694d6a feat(logging): add comprehensive logging system for API key debugging
 c1c7dfd feat(review): enhance review framework with Master Review Framework structure
 ```
@@ -352,4 +430,3 @@ c1c7dfd feat(review): enhance review framework with Master Review Framework stru
 **Release Date**: October 4, 2025
 **Version**: v0.1.2
 **Status**: Stable
-

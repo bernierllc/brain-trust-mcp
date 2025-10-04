@@ -76,20 +76,20 @@ class TestReviewPlan:
         """Sample plan content for testing."""
         return """
         # Project Plan: New Feature
-        
+
         ## Objectives
         - Implement user authentication
         - Add role-based access control
-        
+
         ## Timeline
         - Week 1: Design
         - Week 2: Implementation
         - Week 3: Testing
-        
+
         ## Resources
         - 2 developers
         - 1 QA engineer
-        
+
         ## Risks
         - Integration complexity
         - Timeline constraints
@@ -219,4 +219,3 @@ class TestReviewPlan:
             assert result is not None
             assert result["review_level"] == level.value
             assert 0.0 <= result["overall_score"] <= 1.0
-

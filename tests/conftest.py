@@ -42,4 +42,3 @@ def test_environment() -> Generator[None, None, None]:
         os.environ["LOG_LEVEL"] = original_log_level
     else:
         os.environ.pop("LOG_LEVEL", None)
-

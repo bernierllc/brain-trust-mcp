@@ -89,6 +89,7 @@ Tests that make actual API calls to OpenAI:
 - `test_tools.py::TestReviewPlan` - Tests review_plan tool
 
 **Note:** These tests will:
+
 - Consume OpenAI API tokens
 - Require a valid `OPENAI_API_KEY`
 - Be skipped if API key is not set
@@ -183,7 +184,7 @@ class TestNewFeature:
     async def test_feature_works(self, sample_data, api_key):
         """Test that feature works correctly."""
         result = await new_feature(sample_data, api_key)
-        
+
         assert result is not None
         assert result["status"] == "success"
 ```
@@ -227,4 +228,3 @@ When adding new features:
 2. Ensure all tests pass
 3. Maintain >80% code coverage
 4. Update this README if adding new test categories
-

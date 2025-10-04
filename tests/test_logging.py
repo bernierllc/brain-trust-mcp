@@ -27,6 +27,7 @@ class TestLogging:
 
             # Reload the module to pick up new environment
             from importlib import reload
+
             import server
 
             reload(server)
@@ -62,6 +63,7 @@ class TestLogging:
 
             # Reload the module to pick up new environment
             from importlib import reload
+
             import server
 
             reload(server)
@@ -142,4 +144,3 @@ class TestHealthCheck:
         assert "plan_reviews_count" in result
         assert isinstance(result["plan_reviews_count"], int)
         assert result["plan_reviews_count"] >= 0
-
