@@ -9,7 +9,7 @@ import os
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional, cast
 
 import openai
 import structlog
@@ -18,7 +18,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastmcp import FastMCP
 from fastmcp.server.dependencies import get_http_headers
+from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field
+from starlette.responses import Response
+from starlette.status import HTTP_404_NOT_FOUND
 
 # Get environment and log level from environment variables
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
@@ -50,13 +53,15 @@ logger = structlog.get_logger()
 # Initialize FastMCP server
 mcp = FastMCP("brain-trust")
 
-# Get the app instance for custom routes
-app = mcp.app
+# Create HTTP app for custom routes/static assets
+http_app = mcp.http_app()
 
 # Serve static files from dist directory
 dist_path = Path(__file__).parent / "dist"
 if dist_path.exists():
-    app.mount("/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets")
+    http_app.mount(
+        "/assets", StaticFiles(directory=str(dist_path / "assets")), name="assets"
+    )
 
 
 def get_config_from_headers() -> Dict[str, Any]:
@@ -230,14 +235,21 @@ async def phone_a_friend(
     else:
         prompt = f"Question: {question}\n\nPlease provide a comprehensive answer."
 
-    messages = [{"role": "user", "content": prompt}]
+    messages = cast(
+        List[ChatCompletionMessageParam], [{"role": "user", "content": prompt}]
+    )
 
     try:
         # Create OpenAI client with API key from headers
         client = openai.OpenAI(api_key=final_api_key)
 
         # Log OpenAI request
-        log_openai_request(final_model, messages, final_max_tokens, final_api_key)
+        log_openai_request(
+            final_model,
+            [{"role": "user", "content": prompt}],
+            final_max_tokens,
+            final_api_key,
+        )
 
         response = client.chat.completions.create(
             model=final_model,
@@ -593,7 +605,9 @@ async def review_plan(
         client = openai.OpenAI(api_key=final_api_key)
 
         # Log OpenAI request
-        log_openai_request(final_model, messages, final_max_tokens, final_api_key)
+        log_openai_request(
+            final_model, [dict(m) for m in messages], final_max_tokens, final_api_key
+        )
 
         response = client.chat.completions.create(
             model=final_model,
@@ -659,6 +673,10 @@ async def review_plan(
             score=plan_review.overall_score,
         )
 
+        reviewed_at_value: datetime = cast(
+            datetime, getattr(plan_review, "reviewed_at")
+        )
+        reviewed_at_iso: str = reviewed_at_value.isoformat()
         return {
             "plan_id": plan_id,
             "review_level": review_level,
@@ -667,7 +685,7 @@ async def review_plan(
             "weaknesses": plan_review.weaknesses,
             "suggestions": plan_review.suggestions,
             "detailed_feedback": plan_review.detailed_feedback,
-            "reviewed_at": plan_review.reviewed_at.isoformat(),
+            "reviewed_at": reviewed_at_iso,
         }
 
     except Exception as e:
@@ -705,30 +723,35 @@ class DemoRequest(BaseModel):
     api_key: str
 
 
-@app.post("/api/demo/phone-a-friend")
-async def demo_phone_a_friend(request: DemoRequest) -> JSONResponse:
+@mcp.custom_route("/api/demo/phone-a-friend", methods=["POST"])
+async def demo_phone_a_friend(request: Request) -> JSONResponse:
     """REST API endpoint for phone_a_friend demo."""
     try:
-        if not request.question:
+        payload = await request.json()
+        data = DemoRequest.model_validate(payload)
+
+        if not data.question:
             raise HTTPException(status_code=400, detail="Question is required")
-        if not request.api_key:
+        if not data.api_key:
             raise HTTPException(status_code=400, detail="API key is required")
 
-        if request.context:
+        if data.context:
             prompt = (
-                f"Context: {request.context}\n\n"
-                f"Question: {request.question}\n\n"
+                f"Context: {data.context}\n\n"
+                f"Question: {data.question}\n\n"
                 f"Please provide a comprehensive answer."
             )
         else:
             prompt = (
-                f"Question: {request.question}\n\n"
+                f"Question: {data.question}\n\n"
                 f"Please provide a comprehensive answer."
             )
 
-        messages = [{"role": "user", "content": prompt}]
+        messages = cast(
+            List[ChatCompletionMessageParam], [{"role": "user", "content": prompt}]
+        )
 
-        client = openai.OpenAI(api_key=request.api_key)
+        client = openai.OpenAI(api_key=data.api_key)
         response = client.chat.completions.create(
             model="gpt-4",
             messages=messages,
@@ -751,16 +774,19 @@ async def demo_phone_a_friend(request: DemoRequest) -> JSONResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/demo/review-plan")
-async def demo_review_plan(request: DemoRequest) -> JSONResponse:
+@mcp.custom_route("/api/demo/review-plan", methods=["POST"])
+async def demo_review_plan(request: Request) -> JSONResponse:
     """REST API endpoint for review_plan demo."""
     try:
-        if not request.plan_content:
+        payload = await request.json()
+        data = DemoRequest.model_validate(payload)
+
+        if not data.plan_content:
             raise HTTPException(status_code=400, detail="Plan content is required")
-        if not request.api_key:
+        if not data.api_key:
             raise HTTPException(status_code=400, detail="API key is required")
 
-        review_level = ReviewLevel(request.review_level or "standard")
+        review_level = ReviewLevel(data.review_level or "standard")
 
         review_prompts = {
             ReviewLevel.QUICK: "Provide a quick review focusing on structure and completeness.",
@@ -774,7 +800,7 @@ async def demo_review_plan(request: DemoRequest) -> JSONResponse:
         {review_prompts[review_level]}
 
         Plan Content:
-        {request.plan_content}
+        {data.plan_content}
 
         Please provide your review in JSON format:
         {{
@@ -786,9 +812,11 @@ async def demo_review_plan(request: DemoRequest) -> JSONResponse:
         }}
         """
 
-        messages = [{"role": "user", "content": prompt}]
+        messages = cast(
+            List[ChatCompletionMessageParam], [{"role": "user", "content": prompt}]
+        )
 
-        client = openai.OpenAI(api_key=request.api_key)
+        client = openai.OpenAI(api_key=data.api_key)
         response = client.chat.completions.create(
             model="gpt-4",
             messages=messages,
@@ -836,8 +864,8 @@ async def demo_review_plan(request: DemoRequest) -> JSONResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/demo/health")
-async def demo_health() -> JSONResponse:
+@mcp.custom_route("/api/demo/health", methods=["GET"])
+async def demo_health(_request: Request) -> JSONResponse:
     """REST API endpoint for health check demo."""
     return JSONResponse(
         content={
@@ -848,13 +876,67 @@ async def demo_health() -> JSONResponse:
     )
 
 
-@app.get("/")
-async def serve_homepage() -> FileResponse:
+@mcp.custom_route("/", methods=["GET"])
+async def serve_homepage(_request: Request) -> FileResponse:
     """Serve the homepage."""
     index_path = dist_path / "index.html"
     if index_path.exists():
         return FileResponse(str(index_path))
     return FileResponse("frontend/index.html")
+
+
+# Container/infra health probe
+@mcp.custom_route("/health", methods=["GET"])
+async def health_route(_request: Request) -> JSONResponse:
+    return JSONResponse(
+        content={
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "plan_reviews_count": len(plan_reviews),
+        }
+    )
+
+
+# Static asset fallback route (ensures assets are served even if mount is not applied)
+@mcp.custom_route("/assets/{asset_path:path}", methods=["GET"])
+async def serve_asset(_request: Request) -> Response:
+    # Extract the matched path from the URL
+    # Starlette injects it into scope; FastMCP passes through Request
+    # Using request.url.path to compute relative path after "/assets/"
+    url_path = _request.url.path
+    prefix = "/assets/"
+    if url_path.startswith(prefix):
+        path = url_path.replace(prefix, "", 1)
+    else:
+        path = url_path.lstrip("/")
+    asset_file = dist_path / "assets" / path
+    if asset_file.is_file():
+        return FileResponse(str(asset_file))
+    return JSONResponse({"detail": "Not Found"}, status_code=HTTP_404_NOT_FOUND)
+
+
+@mcp.custom_route("/favicon.ico", methods=["GET"])
+async def favicon(_request: Request) -> Response:
+    # Prefer SVG; many browsers accept SVG favicons
+    svg_path = dist_path / "favicon.svg"
+    if svg_path.is_file():
+        return FileResponse(str(svg_path), media_type="image/svg+xml")
+    # Fallback to built icon in frontend assets
+    svg_src = Path(__file__).parent / "frontend" / "src" / "assets" / "favicon.svg"
+    if svg_src.is_file():
+        return FileResponse(str(svg_src), media_type="image/svg+xml")
+    return JSONResponse({"detail": "Not Found"}, status_code=HTTP_404_NOT_FOUND)
+
+
+@mcp.custom_route("/favicon.svg", methods=["GET"])
+async def favicon_svg(_request: Request) -> Response:
+    svg_path = dist_path / "favicon.svg"
+    if svg_path.is_file():
+        return FileResponse(str(svg_path), media_type="image/svg+xml")
+    svg_src = Path(__file__).parent / "frontend" / "src" / "assets" / "favicon.svg"
+    if svg_src.is_file():
+        return FileResponse(str(svg_src), media_type="image/svg+xml")
+    return JSONResponse({"detail": "Not Found"}, status_code=HTTP_404_NOT_FOUND)
 
 
 # Server startup logging
