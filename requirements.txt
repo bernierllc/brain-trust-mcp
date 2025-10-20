@@ -34,7 +34,7 @@ MarkupSafe==3.0.3
 mcp==1.16.0
 mdurl==0.1.2
 more-itertools==10.8.0
-openai==2.1.0
+openai==2.6.0
 openapi-core==0.19.5
 openapi-pydantic==0.5.1
 openapi-schema-validator==0.6.3
